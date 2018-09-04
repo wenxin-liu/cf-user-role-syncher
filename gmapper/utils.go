@@ -13,25 +13,13 @@ import (
 )
 
 
-type Config struct {
-    AccessToken string
-    //RefreshToken string
-    GroupFilter string
-    CFApi string
-}
-
-
-// Loads config file for gmapper (e.g. CF API endpoint)
-func getConfig (confFile string) Config {
-    // Read configuration from file
-    confcontent, err := ioutil.ReadFile(confFile)
+func configFromFile(config *Config, file string) {
+    // Read configuration
+    confcontent, err := ioutil.ReadFile(file)
     if err != nil { log.Fatal(err) }
     // Parse json into Config object
-    var config Config
     err = json.Unmarshal(confcontent, &config)
     if err != nil { log.Fatal(err) }
-
-    return config   
 }
 
 
@@ -91,4 +79,18 @@ func getTokenFromWeb(config *oauth2.Config, file string) error {
     }
     json.NewEncoder(f).Encode(token)
     return err
+}
+
+
+func getAccessTokenCF() string {
+    // Read configuration
+    confcontent, err := ioutil.ReadFile("/Users/glo3937/.cf/config.json")
+    if err != nil { log.Fatal(err) }
+
+    // Parse json into Config object
+    var config Config
+    err = json.Unmarshal(confcontent, &config)
+    if err != nil { log.Fatal(err) }
+
+    return config.AccessToken
 }
