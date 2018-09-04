@@ -9,7 +9,7 @@ import (
     "net/url"
     "encoding/json"
     "strconv"
-    // "bytes"
+    "bytes"
 
     "golang.org/x/net/context"
     "google.golang.org/api/admin/directory/v1"
@@ -20,24 +20,11 @@ type Config struct {
     CFApiEndpoint string
 }
 
-type Organizations struct {
+type ApiResult struct {
     Resources    []struct {
         Metadata struct {
             GUID       string    `json:"guid"`
-            URL        string    `json:"url"`
         } `json:"metadata"`
-        Entity struct {
-            Name      string      `json:"name"`
-            Spaces    []struct {
-                Metadata struct {
-                    GUID      string    `json:"guid"`
-                    URL       string    `json:"url"`
-                } `json:"metadata"`
-                Entity struct {
-                    Name                     string      `json:"name"`
-                } `json:"entity"`
-            } `json:"spaces"`
-        } `json:"entity"`
     } `json:"resources"`
 }
 
@@ -125,34 +112,34 @@ func startMapper() {
 
 func assignRole(groupEmail string, username string) {
     // Split the group email address to get org, space and role
-    roleMap := strings.Split(groupEmail, "__")
+    groupAttr := strings.Split(groupEmail, "__")
     var org, space, role string
     // 3 items in group email = Org role
     // 4 items in group email = Space role
-    if len(roleMap) == 3 {
-        role  = roleMap[2]
-    } else if len(roleMap) == 4 {
-        space = roleMap[2]
-        role  = roleMap[3]
+    if len(groupAttr) == 3 {
+        role  = groupAttr[2]
+    } else if len(groupAttr) == 4 {
+        space = groupAttr[2]
+        role  = groupAttr[3]
     } else {
         log.Println("Not a valid group email format! Role assignment fails for group: " + groupEmail)
         return
     }
     // First we need to get the org GUID
     // Set query string parameters to search org
-    org = roleMap[1]
+    org = groupAttr[1]
     //fmt.Println("ORG = " + org)
     q := url.Values{}
     q.Add("q", "name:" + org)
     q.Add("inline-relations-depth", "1")
     // Send HTTP Request to CF API
-    resp := sendHttpRequest("GET", config.CFApiEndpoint + "/v2/organizations", &q)
+    resp := sendHttpRequest("GET", config.CFApiEndpoint + "/v2/organizations", &q, "")
     // Callers should close resp.Body
     // when done reading from it
     // Defer the closing of the body
     defer resp.Body.Close()
-    // Create new Organizations data set and parse json from the response
-    var orgs Organizations
+    // Create new ApiResult data set and parse json from the response
+    var orgs ApiResult
     if err := json.NewDecoder(resp.Body).Decode(&orgs); err != nil {
         log.Println(err)
     }
@@ -164,17 +151,71 @@ func assignRole(groupEmail string, username string) {
     }
     fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
 
+    // The 'role' var currently is the last piece in the group email address
+    // e.g. 'orgmanager@exampledomain.com'
+    // Therefore we want to get the string before the @ sign.
+    roleInfo := strings.Split(role, "@")
+    rolename := roleInfo[0]
+    fmt.Println("Role is: " + rolename)
+    // Set http PUT payload
+    var payload string = `{"username": "` + username + `"}`
+    // Check if an Org Role or a Space Role needs to be assigned
     if space != "" {
+        // A Space Role needs to be assigned
         fmt.Println("Space is: " + space)
-    }
-    if role != "" {
-        fmt.Println("Role is: " + role)
+        // Get the Space GUID
+        q := url.Values{}
+        q.Add("q", "name:" + space)
+        q.Add("q", "organization_guid:" + orgs.Resources[0].Metadata.GUID)
+        // Send HTTP Request to CF API
+        resp = sendHttpRequest("GET", config.CFApiEndpoint + "/v2/spaces", &q, "")
+        defer resp.Body.Close()
+        // Create new ApiResult data set and parse json from the response
+        var spaces ApiResult
+        if err := json.NewDecoder(resp.Body).Decode(&spaces); err != nil {
+            log.Println(err)
+        }
+        if len(spaces.Resources) != 1 {
+            fmt.Println("Search for space '" + space + "' did not result in exactly 1 match!")
+            return
+        }
+        fmt.Println("Space ID: " + spaces.Resources[0].Metadata.GUID)
+        // Map for mapping role name to CF API resource path
+        roleMap := map[string]string{
+            "spacemanager": "/managers",
+            "spacedeveloper": "/developers",
+            "spaceauditor": "/auditors",
+        }
+        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[rolename], nil, payload)
+        defer resp.Body.Close()
+        if resp.StatusCode == 201 {
+            fmt.Println("Succesfully assigned SpaceRole '" + rolename + "' to member " + username)
+        } else {
+            fmt.Println("Failed to assign SpaceRole '" + rolename + "' to member " + username)
+        }
+        fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
+    } else {
+        // A Org Role needs to be assigned
+        // Map for mapping role name to CF API resource path
+        roleMap := map[string]string{
+            "orgmanager": "/managers",
+            "billingmanager": "/billing_managers",
+            "auditor": "/auditors",
+        }
+        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + roleMap[rolename], nil, payload)
+        defer resp.Body.Close()
+        if resp.StatusCode == 201 {
+            fmt.Println("Succesfully assigned OrgRole '" + rolename + "' to member " + username)
+        } else {
+            fmt.Println("Failed to assign OrgRole '" + rolename + "' to member " + username)
+        }
+        fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     }
 }
 
-func sendHttpRequest(method string, url string, querystring *url.Values) *http.Response {
+func sendHttpRequest(method string, url string, querystring *url.Values, payload string) *http.Response {
     // Create new http request
-    req, err := http.NewRequest(method, url, nil)
+    req, err := http.NewRequest(method, url, bytes.NewBufferString(payload))
     if err != nil {
         log.Print(err)
         os.Exit(1)
