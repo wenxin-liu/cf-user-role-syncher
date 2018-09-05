@@ -155,6 +155,14 @@ func assignRole(groupEmail string, username string) {
     fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
     // Set http PUT payload
     var payload string = `{"username": "` + username + `"}`
+    // Make sure the user is associated with the org
+    resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + "/users", nil, payload)
+    defer resp.Body.Close()
+    if resp.StatusCode == 201 {
+        fmt.Println("Succesfully associated user '" + username + "' to org " + org)
+    } else {
+        fmt.Println("Failed to associated user '" + username + "' to org " + org)
+    }
     // Check if an Org Role or a Space Role needs to be assigned
     if space != "" {
         // A Space Role needs to be assigned
