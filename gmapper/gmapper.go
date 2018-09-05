@@ -111,8 +111,11 @@ func startMapper() {
 
 
 func assignRole(groupEmail string, username string) {
-    // Split the group email address to get org, space and role
-    groupAttr := strings.Split(groupEmail, "__")
+    // Get the part of the group email address before the '@'
+    mailboxName := strings.Split(groupEmail, "@")[0]
+    fmt.Println("Part before @: " + mailboxName)
+    // Split the mailboxName to get org, space and role
+    groupAttr := strings.Split(mailboxName, "__")
     var org, space, role string
     // 3 items in group email = Org role
     // 4 items in group email = Space role
@@ -150,13 +153,6 @@ func assignRole(groupEmail string, username string) {
         return
     }
     fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
-
-    // The 'role' var currently is the last piece in the group email address
-    // e.g. 'orgmanager@exampledomain.com'
-    // Therefore we want to get the string before the @ sign.
-    roleInfo := strings.Split(role, "@")
-    rolename := roleInfo[0]
-    fmt.Println("Role is: " + rolename)
     // Set http PUT payload
     var payload string = `{"username": "` + username + `"}`
     // Check if an Org Role or a Space Role needs to be assigned
@@ -186,12 +182,12 @@ func assignRole(groupEmail string, username string) {
             "spacedeveloper": "/developers",
             "spaceauditor": "/auditors",
         }
-        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[rolename], nil, payload)
+        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
         defer resp.Body.Close()
         if resp.StatusCode == 201 {
-            fmt.Println("Succesfully assigned SpaceRole '" + rolename + "' to member " + username)
+            fmt.Println("Succesfully assigned SpaceRole '" + role + "' to member " + username)
         } else {
-            fmt.Println("Failed to assign SpaceRole '" + rolename + "' to member " + username)
+            fmt.Println("Failed to assign SpaceRole '" + role + "' to member " + username)
         }
         fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     } else {
@@ -202,12 +198,12 @@ func assignRole(groupEmail string, username string) {
             "billingmanager": "/billing_managers",
             "auditor": "/auditors",
         }
-        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + roleMap[rolename], nil, payload)
+        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
         defer resp.Body.Close()
         if resp.StatusCode == 201 {
-            fmt.Println("Succesfully assigned OrgRole '" + rolename + "' to member " + username)
+            fmt.Println("Succesfully assigned OrgRole '" + role + "' to member " + username)
         } else {
-            fmt.Println("Failed to assign OrgRole '" + rolename + "' to member " + username)
+            fmt.Println("Failed to assign OrgRole '" + role + "' to member " + username)
         }
         fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     }
