@@ -18,6 +18,7 @@ import (
 type Config struct {
     AccessToken string
     CFApiEndpoint string
+    EmailDomainFilter []string
 }
 
 type ApiResult struct {
@@ -111,9 +112,15 @@ func startMapper() {
 
 
 func assignRole(groupEmail string, username string) {
+    // First check if username has a domain which is allowed
+    // Get the domain name from the username
+    userDomain := strings.Split(username, "@")[1]
+    if !contains(config.EmailDomainFilter, userDomain) {
+        fmt.Println("User has not a valid domain")
+        return
+    }
     // Get the part of the group email address before the '@'
     mailboxName := strings.Split(groupEmail, "@")[0]
-    fmt.Println("Part before @: " + mailboxName)
     // Split the mailboxName to get org, space and role
     groupAttr := strings.Split(mailboxName, "__")
     var org, space, role string

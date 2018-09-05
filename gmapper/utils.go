@@ -82,6 +82,16 @@ func getTokenFromWeb(config *oauth2.Config, file string) error {
 }
 
 
+func contains(arr []string, str string) bool {
+   for _, a := range arr {
+      if a == str {
+         return true
+      }
+   }
+   return false
+}
+ 
+
 func getAccessTokenCF() string {
     // Read configuration
     confcontent, err := ioutil.ReadFile("/Users/glo3937/.cf/config.json")
