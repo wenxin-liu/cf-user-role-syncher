@@ -8,9 +8,11 @@ import (
     "net/http"
     "net/url"
     "encoding/json"
-    "strconv"
     "bytes"
+    "errors"
 
+    // "io/ioutil"
+    // "strconv"
     "golang.org/x/net/context"
     "google.golang.org/api/admin/directory/v1"
 )
@@ -18,6 +20,8 @@ import (
 type Config struct {
     AccessToken string
     CFApiEndpoint string
+    UaaApiEndpoint string
+    UaaSsoProvider string
     EmailDomainFilter []string
 }
 
@@ -27,6 +31,22 @@ type ApiResult struct {
             GUID       string    `json:"guid"`
         } `json:"metadata"`
     } `json:"resources"`
+}
+
+type User struct {
+    Resources []struct {
+        LastLogonTime int64  `json:"lastLogonTime"`
+        Origin        string `json:"origin"`
+        ExternalID    string `json:"externalId"`
+        Active        bool   `json:"active"`
+        ID            string `json:"id"`
+        UserName      string `json:"userName"`
+    } `json:"resources"`
+    TotalResults int      `json:"totalResults"`
+}
+
+type UaaGuid struct {
+    ID   string `json:"id"`
 }
 
 var cliOptionsMsg = `Possible options:
@@ -159,6 +179,30 @@ func assignRole(groupEmail string, username string) {
         fmt.Println("Search for org '" + org + "' did not result in exactly 1 match!")
         return
     }
+    // Search uaa to check if the username exists
+    // attributes=id,externalId,userName,active,origin,lastLogonTime
+    // filter=userName eq "gerard.laan@springernature.com"
+    q = url.Values{}
+    q.Add("attributes", "id,externalId,userName,active,origin,lastLogonTime")
+    q.Add("filter", "userName eq \"" + username + "\"")
+    resp = sendHttpRequest("GET", config.UaaApiEndpoint + "/Users", &q, "")
+    var user User
+    if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+        log.Println(err)
+    }
+    // No user or 1 user is fine. More than 1 user in the search result is not okay!
+    if len(user.Resources) > 1 {
+        fmt.Println("Search for user '" + username + "' resulted in more than 1 results!")
+        return
+    } else if len(user.Resources) == 0 {
+        fmt.Println("User '" + username + "' does not exist. Will now be created.")
+        err := createUser(username)
+        if err != nil {
+            fmt.Println("Could not create user " + username)
+            fmt.Println(err)
+            return
+        }
+    }
     //fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
     // Set http PUT payload
     var payload string = `{"username": "` + username + `"}`
@@ -222,6 +266,55 @@ func assignRole(groupEmail string, username string) {
     }
 }
 
+
+// Create user in uaa and sets user's guid in cf
+func createUser(username string) error {
+    var err error
+    // Set http PUT payload for sending to uaa
+    var payload string = `{
+  "emails": [
+    {
+      "primary": true,
+      "value": "` + username + `"
+    }
+  ],
+  "name": {
+    "familyName": "` + username + `",
+    "givenName": "` + username + `"
+  },
+  "origin": "` + config.UaaSsoProvider + `",
+  "userName": "` + username + `"
+}`
+    // Send http request
+    resp := sendHttpRequest("POST", config.UaaApiEndpoint + "/Users", nil, payload)
+    defer resp.Body.Close()
+    if resp.StatusCode == 201 {
+        fmt.Println("Succesfully created user '" + username + "' in UAA")
+    } else {
+        return errors.New("Failed to created user '" + username + "' in UAA")
+    }
+    // Check if GUID is returned
+    var guid UaaGuid
+    if err := json.NewDecoder(resp.Body).Decode(&guid); err != nil {
+        return err
+    }
+    // No user or 1 user is fine. More than 1 user in the search result is not okay!
+    if guid.ID == "" {
+        return errors.New("GUID was empty in UAA Api call for user " + username)
+    }
+    // Set GUID in CF
+    payload = `{"guid": "` + guid.ID + `"}`
+    resp = sendHttpRequest("POST", config.CFApiEndpoint + "/v2/users", nil, payload)
+    defer resp.Body.Close()
+    if resp.StatusCode == 201 {
+        fmt.Println("Succesfully set GUID for '" + username + "' in CF")
+    } else {
+        return errors.New("Failed to set GUID for '" + username + "' in CF")
+    }
+    return err
+}
+
+
 func sendHttpRequest(method string, url string, querystring *url.Values, payload string) *http.Response {
     // Create new http request
     req, err := http.NewRequest(method, url, bytes.NewBufferString(payload))
@@ -237,12 +330,19 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     // Set Headers
     // TEMPORARILY WE USE METHOD getAccessTokenCF()
     req.Header.Add("Authorization", getAccessTokenCF())
+    if (method == "POST") || (method == "PUT") {
+        req.Header.Add("Content-Type", "application/json")
+    }
     // Execute request
     client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
         log.Fatal("Do: ", err)
     }
-    fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
+    // Use this to debug and see the returned body
+    // bodyBytes, _ := ioutil.ReadAll(resp.Body)
+    // bodyString := string(bodyBytes)
+    // fmt.Println(bodyString)
+    //fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     return resp
 }
