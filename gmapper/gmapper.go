@@ -99,9 +99,9 @@ func startMapper() {
             if len(membersRes.Members) == 0 {
                 fmt.Println("No members found.\n")
             } else {
-                fmt.Println("MEMBERS:")
+                //fmt.Println("MEMBERS:")
                 for _, m := range membersRes.Members {
-                    fmt.Printf("%s\n", m.Email)
+                    //fmt.Printf("%s\n", m.Email)
                     // Start process of assigning the right CF role based on group email address
                     assignRole(gr.Email, m.Email)
                 }
@@ -154,12 +154,12 @@ func assignRole(groupEmail string, username string) {
         log.Println(err)
     }
     // Check if there is exactly one org found
-    fmt.Println("Array length: " + strconv.Itoa(len(orgs.Resources)))
+    //fmt.Println("Array length: " + strconv.Itoa(len(orgs.Resources)))
     if len(orgs.Resources) != 1 {
         fmt.Println("Search for org '" + org + "' did not result in exactly 1 match!")
         return
     }
-    fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
+    //fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
     // Set http PUT payload
     var payload string = `{"username": "` + username + `"}`
     // Make sure the user is associated with the org
@@ -173,7 +173,7 @@ func assignRole(groupEmail string, username string) {
     // Check if an Org Role or a Space Role needs to be assigned
     if space != "" {
         // A Space Role needs to be assigned
-        fmt.Println("Space is: " + space)
+        //fmt.Println("Space is: " + space)
         // Get the Space GUID
         q := url.Values{}
         q.Add("q", "name:" + space)
@@ -190,7 +190,7 @@ func assignRole(groupEmail string, username string) {
             fmt.Println("Search for space '" + space + "' did not result in exactly 1 match!")
             return
         }
-        fmt.Println("Space ID: " + spaces.Resources[0].Metadata.GUID)
+        //fmt.Println("Space ID: " + spaces.Resources[0].Metadata.GUID)
         // Map for mapping role name to CF API resource path
         roleMap := map[string]string{
             "spacemanager": "/managers",
@@ -204,7 +204,6 @@ func assignRole(groupEmail string, username string) {
         } else {
             fmt.Println("Failed to assign SpaceRole '" + role + "' to member " + username)
         }
-        fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     } else {
         // A Org Role needs to be assigned
         // Map for mapping role name to CF API resource path
@@ -220,7 +219,6 @@ func assignRole(groupEmail string, username string) {
         } else {
             fmt.Println("Failed to assign OrgRole '" + role + "' to member " + username)
         }
-        fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     }
 }
 
@@ -235,7 +233,7 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     if querystring != nil {
         req.URL.RawQuery = querystring.Encode()
     }
-    fmt.Println(req.URL.String())
+    //fmt.Println(req.URL.String())
     // Set Headers
     // TEMPORARILY WE USE METHOD getAccessTokenCF()
     req.Header.Add("Authorization", getAccessTokenCF())
@@ -245,5 +243,6 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     if err != nil {
         log.Fatal("Do: ", err)
     }
+    fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     return resp
 }
