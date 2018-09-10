@@ -90,6 +90,7 @@ func contains(arr []string, str string) bool {
    }
    return false
 }
+<<<<<<< HEAD
 
 //
 //func BytesToString1(data []byte) string {
@@ -119,5 +120,13 @@ func contains(arr []string, str string) bool {
 //    return body2
 //
 //}
+=======
+ 
+
+func getAccessTokenCF() string {
+    // Read configuration
+    confcontent, err := ioutil.ReadFile("/Users/glo3937/.cf/config.json")
+    if err != nil { log.Fatal(err) }
+>>>>>>> 727479f6ff7b525d110e8e26b7650f432cd13385
 
 
