@@ -8,14 +8,9 @@ import (
     "log"
     "net/http"
     "net/url"
-<<<<<<< HEAD
     "os"
     "strings"
-=======
-    "encoding/json"
-    "bytes"
-    "errors"
->>>>>>> 727479f6ff7b525d110e8e26b7650f432cd13385
+
 
     // "io/ioutil"
     // "strconv"
@@ -29,11 +24,8 @@ type Config struct {
     UaaApiEndpoint string
     UaaSsoProvider string
     EmailDomainFilter []string
-<<<<<<< HEAD
     RefreshToken string
 //    UaaEndpoint string
-=======
->>>>>>> 727479f6ff7b525d110e8e26b7650f432cd13385
 }
 
 type ApiResult struct {
@@ -300,11 +292,7 @@ func createUser(username string) error {
     resp := sendHttpRequest("POST", config.UaaApiEndpoint + "/Users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
-<<<<<<< HEAD
         fmt.Println("Successfully created user '" + username + "' in UAA")
-=======
-        fmt.Println("Succesfully created user '" + username + "' in UAA")
->>>>>>> 727479f6ff7b525d110e8e26b7650f432cd13385
     } else {
         return errors.New("Failed to created user '" + username + "' in UAA")
     }
@@ -322,11 +310,7 @@ func createUser(username string) error {
     resp = sendHttpRequest("POST", config.CFApiEndpoint + "/v2/users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
-<<<<<<< HEAD
         fmt.Println("Successfully set GUID for '" + username + "' in CF")
-=======
-        fmt.Println("Succesfully set GUID for '" + username + "' in CF")
->>>>>>> 727479f6ff7b525d110e8e26b7650f432cd13385
     } else {
         return errors.New("Failed to set GUID for '" + username + "' in CF")
     }
@@ -348,13 +332,8 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     //fmt.Println(req.URL.String())
     // Set Headers
     // TEMPORARILY WE USE METHOD getAccessTokenCF()
-<<<<<<< HEAD
-    
     uaaresponse := getTokenFromUaa()
     req.Header.Add("Authorization", UnmarshalJson(uaaresponse))
-=======
-    req.Header.Add("Authorization", getAccessTokenCF())
->>>>>>> 727479f6ff7b525d110e8e26b7650f432cd13385
     if (method == "POST") || (method == "PUT") {
         req.Header.Add("Content-Type", "application/json")
     }
