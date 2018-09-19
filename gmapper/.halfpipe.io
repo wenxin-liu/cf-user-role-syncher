@@ -6,6 +6,6 @@ repo:
 tasks:
 - type: run
   name: run
-  script: ./run.sh
+  script: ./run
   docker:
     image: golang
