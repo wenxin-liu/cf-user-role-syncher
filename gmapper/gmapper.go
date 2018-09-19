@@ -93,7 +93,7 @@ func main() {
 func genOauthToken() {
     fmt.Println("Will generate file " + tokFile + " for Google Directory Admin API")
     // Load oauth.Config (e.g. Google oauth endpoint, client_id, client_secret)
-    oauthConf := getOauthConfig(credFile)
+    oauthConf := getOauthConfigFromFile(credFile)
     // Start oauth process on the web to get oauth token 
     err := getTokenFromWeb(oauthConf, tokFile)
     if err != nil {

@@ -12,6 +12,14 @@ import (
 )
 
 
+// func getOauthConfig() *oauth2.Config {
+
+// }
+
+
+// func getOauthToken() *oauth2.Token {
+
+// }
 
 
 func getConfigFromFile(config *Config, file string) {
