@@ -30,7 +30,7 @@ const EnvGoogleOAuthScope string = "GOOGLEOAUTHSCOPE"
 const EnvGoogleAccessToken string = "GOOGLEACCESSTOKEN"
 const EnvGoogleRefreshToken string = "GOOGLEREFRESHTOKEN"
 const EnvGoogleTokenType string = "GOOGLETOKENTYPE"
-const EnvGoogleTokenExpiry string = "GOOGLETOKENEXPIRY"
+
 
 
 type Config struct {
