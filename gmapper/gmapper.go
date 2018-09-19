@@ -14,6 +14,23 @@ import (
     "google.golang.org/api/admin/directory/v1"
 )
 
+// Declaration of environment variable key names
+const EnvCfApiEndPoint string = "CFAPIENDPOINT"
+const EnvUaaEndPoint string = "UAAENDPOINT"
+const EnvUaaSsoProvider string = "UAASSOPROVIDER"
+const EnvOauthCfRefreshToken string = "OAUTHCFREFRESHTOKEN"
+const EnvGoogleRedirectUri string = "GOOGLEREDIRECTURI"
+const EnvGoogleAuthUri string = "GOOGLEAUTHURI"
+const EnvGoogleTokenUri string = "GOOGLETOKENURI"
+const EnvGoogleClientId string = "GOOGLECLIENTID"
+const EnvGoogleClientSecret string = "GOOGLECLIENTSECRET"
+const EnvGoogleOAuthScope string = "GOOGLEOAUTHSCOPE"
+const EnvGoogleAccessToken string = "GOOGLEACCESSTOKEN"
+const EnvGoogleRefreshToken string = "GOOGLEREFRESHTOKEN"
+const EnvGoogleTokenType string = "GOOGLETOKENTYPE"
+const EnvGoogleTokenExpiry string = "GOOGLETOKENEXPIRY"
+
+
 type Config struct {
     AccessToken string
     CFApiEndpoint string
