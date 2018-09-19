@@ -12,6 +12,8 @@ import (
     "strings"
     "golang.org/x/net/context"
     "google.golang.org/api/admin/directory/v1"
+    // "io/ioutil"
+    // "strconv"
 )
 
 // Declaration of environment variable key names
@@ -106,11 +108,14 @@ func genOauthToken() {
 
 func startMapper() {
     // Load config
-    getConfigFromFile(&config, confFile)
+    //getConfigFromFile(&config, confFile)
+
     // Load oauth.Config (e.g. Google oauth endpoint)
-    oauthConf := getOauthConfigFromFile(credFile)
-    // Load existing oauth token (access_key and resfresh_key)
-    oauthTok, err := getOauthTokenFromFile(tokFile)
+    oauthConf := getOauthConfig()
+    //fmt.Println(oauthConf)
+    // Load existing oauth token (important part is the resfresh_key)
+    oauthTok := getOauthToken()
+    //fmt.Println("Token: " + oauthTok.RefreshToken)
     // Create 'Service' so Google Directory (Admin) can be requested
     httpClient := oauthConf.Client(context.Background(), oauthTok)
     googleService, err := admin.New(httpClient)
@@ -179,7 +184,7 @@ func assignRole(groupEmail string, username string) {
     q.Add("q", "name:" + org)
     q.Add("inline-relations-depth", "1")
     // Send HTTP Request to CF API
-    resp := sendHttpRequest("GET", config.CFApiEndpoint + "/v2/organizations", &q, "")
+    resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations", &q, "")
     // Callers should close resp.Body
     // when done reading from it
     // Defer the closing of the body
@@ -201,7 +206,7 @@ func assignRole(groupEmail string, username string) {
     q = url.Values{}
     q.Add("attributes", "id,externalId,userName,active,origin,lastLogonTime")
     q.Add("filter", "userName eq \"" + username + "\"")
-    resp = sendHttpRequest("GET", config.UaaApiEndpoint + "/Users", &q, "")
+    resp = sendHttpRequest("GET", os.Getenv(EnvUaaEndPoint) + "/Users", &q, "")
     var user User
     if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
         log.Println(err)
@@ -223,7 +228,7 @@ func assignRole(groupEmail string, username string) {
     // Set http PUT payload
     var payload string = `{"username": "` + username + `"}`
     // Make sure the user is associated with the org
-    resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + "/users", nil, payload)
+    resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + "/users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
         fmt.Println("Successfully associated user '" + username + "' to org " + org)
@@ -239,7 +244,7 @@ func assignRole(groupEmail string, username string) {
         q.Add("q", "name:" + space)
         q.Add("q", "organization_guid:" + orgs.Resources[0].Metadata.GUID)
         // Send HTTP Request to CF API
-        resp = sendHttpRequest("GET", config.CFApiEndpoint + "/v2/spaces", &q, "")
+        resp = sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces", &q, "")
         defer resp.Body.Close()
         // Create new ApiResult data set and parse json from the response
         var spaces ApiResult
@@ -257,7 +262,7 @@ func assignRole(groupEmail string, username string) {
             "spacedeveloper": "/developers",
             "spaceauditor": "/auditors",
         }
-        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
+        resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
         defer resp.Body.Close()
         if resp.StatusCode == 201 {
             fmt.Println("Successfully assigned SpaceRole '" + role + "' to member " + username)
@@ -272,7 +277,7 @@ func assignRole(groupEmail string, username string) {
             "billingmanager": "/billing_managers",
             "auditor": "/auditors",
         }
-        resp = sendHttpRequest("PUT", config.CFApiEndpoint + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
+        resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
         defer resp.Body.Close()
         if resp.StatusCode == 201 {
             fmt.Println("Successfully assigned OrgRole '" + role + "' to member " + username)
@@ -298,11 +303,11 @@ func createUser(username string) error {
     "familyName": "` + username + `",
     "givenName": "` + username + `"
   },
-  "origin": "` + config.UaaSsoProvider + `",
+  "origin": "` + os.Getenv(EnvUaaSsoProvider) + `",
   "userName": "` + username + `"
 }`
     // Send http request
-    resp := sendHttpRequest("POST", config.UaaApiEndpoint + "/Users", nil, payload)
+    resp := sendHttpRequest("POST", os.Getenv(EnvUaaEndPoint) + "/Users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
         fmt.Println("Successfully created user '" + username + "' in UAA")
@@ -320,7 +325,7 @@ func createUser(username string) error {
     }
     // Set GUID in CF
     payload = `{"guid": "` + guid.ID + `"}`
-    resp = sendHttpRequest("POST", config.CFApiEndpoint + "/v2/users", nil, payload)
+    resp = sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint) + "/v2/users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
         fmt.Println("Successfully set GUID for '" + username + "' in CF")
@@ -359,6 +364,6 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     // bodyBytes, _ := ioutil.ReadAll(resp.Body)
     // bodyString := string(bodyBytes)
     // fmt.Println(bodyString)
-    //fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
+    // fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
     return resp
 }

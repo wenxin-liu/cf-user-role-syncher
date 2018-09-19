@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "log"
+    "time"
     "encoding/json"
     "io/ioutil"
     "golang.org/x/oauth2"
@@ -12,14 +13,36 @@ import (
 )
 
 
-// func getOauthConfig() *oauth2.Config {
+// Constructs a oauth2.Config object using the values from environment variables
+func getOauthConfig() *oauth2.Config {
+    return &oauth2.Config{
+        ClientID:     os.Getenv(EnvGoogleClientId),
+        ClientSecret: os.Getenv(EnvGoogleClientSecret),
+        RedirectURL:  os.Getenv(EnvGoogleRedirectUri),
+        Scopes:       []string{os.Getenv(EnvGoogleOAuthScope)},
+        Endpoint: oauth2.Endpoint{
+            AuthURL:  os.Getenv(EnvGoogleAuthUri),
+            TokenURL: os.Getenv(EnvGoogleTokenUri),
+        },
+    }
+}
 
-// }
 
-
-// func getOauthToken() *oauth2.Token {
-
-// }
+// Constructs a oauth2.Token object using the values from environment variables
+func getOauthToken() *oauth2.Token {
+    // The AccessToken is only valid before the expiry date.
+    // As we won't be updating the AccessToken environment variable every time,
+    // all we care about is the RefreshToken. 
+    // Therefore, we just use a static expiry date
+    t, _ := time.Parse(time.RFC822, "01 Jan 18 00:00 BST")
+    // Return the Token
+    return &oauth2.Token{
+        AccessToken:  os.Getenv(EnvGoogleAccessToken),
+        TokenType:    os.Getenv(EnvGoogleTokenType),
+        RefreshToken: os.Getenv(EnvGoogleRefreshToken),
+        Expiry:       t,
+    }
+}
 
 
 func getConfigFromFile(config *Config, file string) {
@@ -57,6 +80,7 @@ func getOauthTokenFromFile(file string) (*oauth2.Token, error) {
     }
     tok := &oauth2.Token{}
     err = json.NewDecoder(f).Decode(tok)
+    fmt.Println("Token Expiry: " + tok.Expiry.String())
     return tok, err
 }
 

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"os"
 )
 
 type TokenResponse struct {
@@ -17,8 +18,8 @@ type TokenResponse struct {
 }
 
 func getTokenFromUaa() []byte {
-	body := strings.NewReader(`client_id=cf&client_secret=&grant_type=refresh_token&refresh_token=` + config.RefreshToken)
-	req, err := http.NewRequest("POST", config.UaaApiEndpoint + "/oauth/token", body)
+	body := strings.NewReader(`client_id=cf&client_secret=&grant_type=refresh_token&refresh_token=` + os.Getenv(EnvOauthCfRefreshToken))
+	req, err := http.NewRequest("POST", os.Getenv(EnvUaaEndPoint) + "/oauth/token", body)
 	if err != nil {
 		// handle err
 	}
