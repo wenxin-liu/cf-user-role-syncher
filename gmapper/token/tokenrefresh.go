@@ -1,4 +1,4 @@
-package main
+package token
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ type TokenResponse struct {
 	Jti          string `json:"jti"`
 }
 
-func getTokenFromUaa() []byte {
+func GetTokenFromUaa() []byte {
 	body := strings.NewReader(`client_id=cf&client_secret=&grant_type=refresh_token&refresh_token=` + os.Getenv(EnvOauthCfRefreshToken))
 	req, err := http.NewRequest("POST", os.Getenv(EnvUaaEndPoint) + "/oauth/token", body)
 	if err != nil {

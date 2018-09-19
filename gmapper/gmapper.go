@@ -5,7 +5,8 @@ import (
     "encoding/json"
     "errors"
     "fmt"
-    "log"
+	"github.com/springerPE/gsuite-cf-roles-mapper/token"
+	"log"
     "net/http"
     "net/url"
     "os"
@@ -17,31 +18,10 @@ import (
 )
 
 // Declaration of environment variable key names
+
 const EnvCfApiEndPoint string = "CFAPIENDPOINT"
 const EnvUaaEndPoint string = "UAAENDPOINT"
 const EnvUaaSsoProvider string = "UAASSOPROVIDER"
-const EnvOauthCfRefreshToken string = "OAUTHCFREFRESHTOKEN"
-const EnvGoogleRedirectUri string = "GOOGLEREDIRECTURI"
-const EnvGoogleAuthUri string = "GOOGLEAUTHURI"
-const EnvGoogleTokenUri string = "GOOGLETOKENURI"
-const EnvGoogleClientId string = "GOOGLECLIENTID"
-const EnvGoogleClientSecret string = "GOOGLECLIENTSECRET"
-const EnvGoogleOAuthScope string = "GOOGLEOAUTHSCOPE"
-const EnvGoogleAccessToken string = "GOOGLEACCESSTOKEN"
-const EnvGoogleRefreshToken string = "GOOGLEREFRESHTOKEN"
-const EnvGoogleTokenType string = "GOOGLETOKENTYPE"
-
-
-
-type Config struct {
-    AccessToken string
-    CFApiEndpoint string
-    UaaApiEndpoint string
-    UaaSsoProvider string
-    EmailDomainFilter []string
-    RefreshToken string
-//    UaaEndpoint string
-}
 
 type ApiResult struct {
     Resources    []struct {
@@ -74,7 +54,7 @@ var cliOptionsMsg = `Possible options:
 var confFile string = "config.json"
 var tokFile string  = "token.json"
 var credFile string = "credentials.json"
-var config Config
+var config token.Config
 
 
 func main() {
@@ -95,9 +75,9 @@ func main() {
 func genOauthToken() {
     fmt.Println("Will generate file " + tokFile + " for Google Directory Admin API")
     // Load oauth.Config (e.g. Google oauth endpoint, client_id, client_secret)
-    oauthConf := getOauthConfigFromFile(credFile)
+    oauthConf := token.GetOauthConfigFromFile(credFile)
     // Start oauth process on the web to get oauth token 
-    err := getTokenFromWeb(oauthConf, tokFile)
+    err := token.GetTokenFromWeb(oauthConf, tokFile)
     if err != nil {
         log.Fatalf("Unable to create oauth token: %v", err)
     } else {
@@ -111,10 +91,10 @@ func startMapper() {
     //getConfigFromFile(&config, confFile)
 
     // Load oauth.Config (e.g. Google oauth endpoint)
-    oauthConf := getOauthConfig()
+    oauthConf := token.GetOauthConfig()
     //fmt.Println(oauthConf)
     // Load existing oauth token (important part is the resfresh_key)
-    oauthTok := getOauthToken()
+    oauthTok := token.GetOauthToken()
     //fmt.Println("Token: " + oauthTok.RefreshToken)
     // Create 'Service' so Google Directory (Admin) can be requested
     httpClient := oauthConf.Client(context.Background(), oauthTok)
@@ -349,8 +329,8 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     }
     //fmt.Println(req.URL.String())
     // Set Headers
-    uaaresponse := getTokenFromUaa()
-    req.Header.Add("Authorization", UnmarshalJson(uaaresponse))
+    uaaresponse := token.GetTokenFromUaa()
+    req.Header.Add("Authorization", token.UnmarshalJson(uaaresponse))
     if (method == "POST") || (method == "PUT") {
         req.Header.Add("Content-Type", "application/json")
     }

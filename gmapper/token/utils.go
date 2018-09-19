@@ -1,4 +1,4 @@
-package main
+package token
 
 import (
     "os"
@@ -12,9 +12,30 @@ import (
     "google.golang.org/api/admin/directory/v1"
 )
 
+const EnvUaaEndPoint string = "UAAENDPOINT"
+const EnvOauthCfRefreshToken string = "OAUTHCFREFRESHTOKEN"
+const EnvGoogleRedirectUri string = "GOOGLEREDIRECTURI"
+const EnvGoogleAuthUri string = "GOOGLEAUTHURI"
+const EnvGoogleTokenUri string = "GOOGLETOKENURI"
+const EnvGoogleClientId string = "GOOGLECLIENTID"
+const EnvGoogleClientSecret string = "GOOGLECLIENTSECRET"
+const EnvGoogleOAuthScope string = "GOOGLEOAUTHSCOPE"
+const EnvGoogleAccessToken string = "GOOGLEACCESSTOKEN"
+const EnvGoogleRefreshToken string = "GOOGLEREFRESHTOKEN"
+const EnvGoogleTokenType string = "GOOGLETOKENTYPE"
+
+type Config struct {
+	AccessToken string
+	CFApiEndpoint string
+	UaaApiEndpoint string
+	UaaSsoProvider string
+	EmailDomainFilter []string
+	RefreshToken string
+	//    UaaEndpoint string
+}
 
 // Constructs a oauth2.Config object using the values from environment variables
-func getOauthConfig() *oauth2.Config {
+func GetOauthConfig() *oauth2.Config {
     return &oauth2.Config{
         ClientID:     os.Getenv(EnvGoogleClientId),
         ClientSecret: os.Getenv(EnvGoogleClientSecret),
@@ -29,7 +50,7 @@ func getOauthConfig() *oauth2.Config {
 
 
 // Constructs a oauth2.Token object using the values from environment variables
-func getOauthToken() *oauth2.Token {
+func GetOauthToken() *oauth2.Token {
     // The AccessToken is only valid before the expiry date.
     // As we won't be updating the AccessToken environment variable every time,
     // all we care about is the RefreshToken. 
@@ -45,7 +66,7 @@ func getOauthToken() *oauth2.Token {
 }
 
 
-func getConfigFromFile(config *Config, file string) {
+func GetConfigFromFile(config *Config, file string) {
     // Read configuration
     confcontent, err := ioutil.ReadFile(file)
     if err != nil { log.Fatal(err) }
@@ -56,7 +77,7 @@ func getConfigFromFile(config *Config, file string) {
 
 
 // Returns oauth.Config (e.g. Google oauth endpoint)
-func getOauthConfigFromFile(file string) *oauth2.Config {
+func GetOauthConfigFromFile(file string) *oauth2.Config {
     // Read the local oauth credentials file
     b, err := ioutil.ReadFile(file)
     if err != nil {
@@ -72,7 +93,7 @@ func getOauthConfigFromFile(file string) *oauth2.Config {
 
 
 // Loads existing oauth token from local file (access_key and resfresh_key)
-func getOauthTokenFromFile(file string) (*oauth2.Token, error) {
+func GetOauthTokenFromFile(file string) (*oauth2.Token, error) {
     f, err := os.Open(file)
     defer f.Close()
     if err != nil {
@@ -86,7 +107,7 @@ func getOauthTokenFromFile(file string) (*oauth2.Token, error) {
 
 
 // Starts process of getting oauth token, by authenticating on Google using a browser
-func getTokenFromWeb(config *oauth2.Config, file string) error {
+func GetTokenFromWeb(config *oauth2.Config, file string) error {
     // Generate URL where user needs to authenticate using his browser
     authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
     fmt.Printf("Go to the following link in your browser, then type the "+
