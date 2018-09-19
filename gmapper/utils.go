@@ -6,14 +6,15 @@ import (
     "log"
     "encoding/json"
     "io/ioutil"
-
     "golang.org/x/oauth2"
     "golang.org/x/oauth2/google"
     "google.golang.org/api/admin/directory/v1"
 )
 
 
-func configFromFile(config *Config, file string) {
+
+
+func getConfigFromFile(config *Config, file string) {
     // Read configuration
     confcontent, err := ioutil.ReadFile(file)
     if err != nil { log.Fatal(err) }
@@ -24,7 +25,7 @@ func configFromFile(config *Config, file string) {
 
 
 // Returns oauth.Config (e.g. Google oauth endpoint)
-func getOauthConfig(file string) *oauth2.Config {
+func getOauthConfigFromFile(file string) *oauth2.Config {
     // Read the local oauth credentials file
     b, err := ioutil.ReadFile(file)
     if err != nil {
@@ -40,7 +41,7 @@ func getOauthConfig(file string) *oauth2.Config {
 
 
 // Loads existing oauth token from local file (access_key and resfresh_key)
-func tokenFromFile(file string) (*oauth2.Token, error) {
+func getOauthTokenFromFile(file string) (*oauth2.Token, error) {
     f, err := os.Open(file)
     defer f.Close()
     if err != nil {

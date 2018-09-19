@@ -106,11 +106,11 @@ func genOauthToken() {
 
 func startMapper() {
     // Load config
-    configFromFile(&config, confFile)
+    getConfigFromFile(&config, confFile)
     // Load oauth.Config (e.g. Google oauth endpoint)
-    oauthConf := getOauthConfig(credFile)
+    oauthConf := getOauthConfigFromFile(credFile)
     // Load existing oauth token (access_key and resfresh_key)
-    oauthTok, err := tokenFromFile(tokFile)
+    oauthTok, err := getOauthTokenFromFile(tokFile)
     // Create 'Service' so Google Directory (Admin) can be requested
     httpClient := oauthConf.Client(context.Background(), oauthTok)
     googleService, err := admin.New(httpClient)
