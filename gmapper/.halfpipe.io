@@ -8,4 +8,4 @@ tasks:
   name: run
   script: ./run
   docker:
-    image: golang
+    image: golang:1.11-stretch
