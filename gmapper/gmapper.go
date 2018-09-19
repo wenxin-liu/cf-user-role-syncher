@@ -10,10 +10,6 @@ import (
     "net/url"
     "os"
     "strings"
-
-
-    // "io/ioutil"
-    // "strconv"
     "golang.org/x/net/context"
     "google.golang.org/api/admin/directory/v1"
 )
@@ -331,7 +327,6 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     }
     //fmt.Println(req.URL.String())
     // Set Headers
-    // TEMPORARILY WE USE METHOD getAccessTokenCF()
     uaaresponse := getTokenFromUaa()
     req.Header.Add("Authorization", UnmarshalJson(uaaresponse))
     if (method == "POST") || (method == "PUT") {
