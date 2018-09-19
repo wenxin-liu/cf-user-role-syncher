@@ -1,0 +1,14 @@
+export CFAPIENDPOINT=`cat ~/.cf/config.json | jq -r .Target`
+export UAAENDPOINT=`cat ~/.cf/config.json | jq -r .UaaEndpoint`
+export UAASSOPROVIDER=google
+export OAUTHCFREFRESHTOKEN=`cat ~/.cf/config.json | jq -r .RefreshToken`
+export GOOGLEREDIRECTURI=urn:ietf:wg:oauth:2.0:oob
+export GOOGLEAUTHURI=https://accounts.google.com/o/oauth2/auth
+export GOOGLETOKENURI=https://www.googleapis.com/oauth2/v3/token
+export GOOGLECLIENTID=`cat credentials.json | jq -r .installed.client_id`
+export GOOGLECLIENTSECRET=`cat credentials.json | jq -r .installed.client_secret`
+export GOOGLEOAUTHSCOPE=https://www.googleapis.com/auth/admin.directory.group
+export GOOGLEACCESSTOKEN=`cat token.json | jq -r .access_token`
+export GOOGLEREFRESHTOKEN=`cat token.json | jq -r .refresh_token`
+export GOOGLETOKENTYPE=`cat token.json | jq -r .token_type`
+export GOOGLETOKENEXPIRY=`cat token.json | jq -r .expiry`
