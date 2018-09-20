@@ -1,5 +1,6 @@
 team: engineering-enablement
 pipeline: gsuite-cf-roles-mapper-gmapper
+trigger_interval: 0.25h
 repo:
   watched_paths:
   - gmapper
