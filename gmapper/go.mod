@@ -1,4 +1,4 @@
-module github.com/springerPE/gsuite-cf-roles-mapper
+module github.com/SpringerPE/cf-google-sso-authorization-handler/gmapper
 
 require (
 	cloud.google.com/go v0.28.0 // indirect

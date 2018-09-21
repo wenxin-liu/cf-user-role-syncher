@@ -5,7 +5,7 @@ import (
     "encoding/json"
     "errors"
     "fmt"
-	"github.com/springerPE/gsuite-cf-roles-mapper/token"
+	"github.com/SpringerPE/cf-google-sso-authorization-handler/gmapper/token"
 	"log"
     "net/http"
     "net/url"
