@@ -18,7 +18,6 @@ import (
 )
 
 // Declaration of environment variable key names
-
 const EnvCfApiEndPoint string = "CFAPIENDPOINT"
 const EnvUaaEndPoint string = "UAAENDPOINT"
 const EnvUaaSsoProvider string = "UAASSOPROVIDER"
@@ -51,10 +50,6 @@ var cliOptionsMsg = `Possible options:
 - gmapper token
 
 `
-var confFile string = "config.json"
-var tokFile string  = "token.json"
-var credFile string = "credentials.json"
-var config token.Config
 
 
 func main() {
@@ -62,7 +57,7 @@ func main() {
     if len(os.Args) > 1 {
         switch os.Args[1] {
         case "token":
-            genOauthToken()
+            token.GenGoogleOauthToken()
         default:
             fmt.Print(cliOptionsMsg)
         }
@@ -72,30 +67,11 @@ func main() {
 }
 
 
-func genOauthToken() {
-    fmt.Println("Will generate file " + tokFile + " for Google Directory Admin API")
-    // Load oauth.Config (e.g. Google oauth endpoint, client_id, client_secret)
-    oauthConf := token.GetOauthConfigFromFile(credFile)
-    // Start oauth process on the web to get oauth token 
-    err := token.GetTokenFromWeb(oauthConf, tokFile)
-    if err != nil {
-        log.Fatalf("Unable to create oauth token: %v", err)
-    } else {
-        fmt.Println(tokFile + " created!")
-    }
-}
-
-
 func startMapper() {
-    // Load config
-    //getConfigFromFile(&config, confFile)
-
     // Load oauth.Config (e.g. Google oauth endpoint)
     oauthConf := token.GetOauthConfig()
-    //fmt.Println(oauthConf)
-    // Load existing oauth token (important part is the resfresh_key)
+    // Load oauth.Token for Google (e.g RefreshToken)
     oauthTok := token.GetOauthToken()
-    //fmt.Println("Token: " + oauthTok.RefreshToken)
     // Create 'Service' so Google Directory (Admin) can be requested
     httpClient := oauthConf.Client(context.Background(), oauthTok)
     googleService, err := admin.New(httpClient)
@@ -133,13 +109,6 @@ func startMapper() {
 
 
 func assignRole(groupEmail string, username string) {
-    // First check if username has a domain which is allowed
-    // Get the domain name from the username
-    // userDomain := strings.Split(username, "@")[1]
-    // if !contains(config.EmailDomainFilter, userDomain) {
-    //     fmt.Println("User has not a valid domain")
-    //     return
-    // }
     // Get the part of the group email address before the '@'
     mailboxName := strings.Split(groupEmail, "@")[0]
     // Split the mailboxName to get org, space and role
