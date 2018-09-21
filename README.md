@@ -12,12 +12,14 @@ The aim of Gmapper is to map members (users) of a Google **Group** to its respec
 ## Why was Gmapper created?
 When single sign on (SSO) is implemented on CloudFoundry (CF), this means there is an authentication provider configured for UAA. Within Springer Nature we decided to use Google as provider using OpenID Connect as the SSO protocol. UAA handles the authentication (who are you?), but it does not handle the authorization (what are you allowed to do?). Every user needs to get an Org and/or Space role assigned within CF before it can do anything. Therefore, Gmapper was created to act as a complementary component to CF SSO in order to automate authorization.
 
+
 ## How to build?
 - Clone the repo
 - `cd cf-google-sso-authorization-handler/gmapper`
 - `go build gmapper.go`
 
 > This app is using the module feature from Go 1.11. Therefore, Go 1.11 or up is required to build. If you are building from inside your $GOPATH, please keep [these](https://github.com/golang/go/wiki/Modules#installing-and-activating-module-support) instructions in mind.
+
 
 ## What do you need to feed into Gmapper?
 Gmapper needs a couple of environment variables to be set. In short it needs to know:
@@ -42,7 +44,18 @@ Environment variables overview:
 | GOOGLEREFRESHTOKEN | hwqec/wqdc82dwqu21d12jw-21 | [How to get this?](OAUTH.md#oauth-refresh-token-for-google) |
 | GOOGLETOKENTYPE | Bearer | [How to get this?](OAUTH.md#oauth-refresh-token-for-google) |
 
+
 ## What does the app really do?
+- Search in your GSuite directory for groups starting with the defined group name prefix. The prefix is meant to identify the groups that are used for CF authorization. For example, search for all groups starting with *cfrole__*.
+- Iterate over every found group. For every group do:
+- Is it about an org role or a space role? Every Google Group needs to be named according to a fixed naming convention:
+  > *groupprefix__orgname__rolename@yourdomain.com* for org roles.
+  > Possible org role names are: `orgmanager`, `billingmanager`, `auditor`
+  > *groupprefix__orgname__spacename__rolename@yourdomain.com* for space roles.
+  > Possible space role names are: `spacemanager`, `spacedeveloper`, `spaceauditor`
+- Fetch the members from the group. It will use the email address as username.
+- Even with sso, uaa requires an actual user account to be present. You can configure your uaa sso provider to automatically create the user when signing in for the first time (*addShadowUserOnLogin: true*). We haven't enabled this as this allows any valid Google account to sign in. Therefore, gmapper checks if a group member already exists as user in uaa. If not, the user will be created.
+- The org or space role is assigned.
 
 
 ## How to run locally?
