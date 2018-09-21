@@ -20,6 +20,7 @@ import (
 // Declaration of environment variable key names
 const EnvCfApiEndPoint string = "CFAPIENDPOINT"
 
+// Structure for getting GUID of Orgs and Spaces in CF
 type ApiResult struct {
     Resources    []struct {
         Metadata struct {
@@ -28,6 +29,8 @@ type ApiResult struct {
     } `json:"resources"`
 }
 
+// Structure for user details
+// Used when searching on existence of user in UAA
 type User struct {
     Resources []struct {
         LastLogonTime int64  `json:"lastLogonTime"`
@@ -40,6 +43,8 @@ type User struct {
     TotalResults int      `json:"totalResults"`
 }
 
+// Structure which holds the GUID of a user
+// The GUID should be returned when new user is created in UAA
 type UaaGuid struct {
     ID   string `json:"id"`
 }
@@ -82,26 +87,24 @@ func startMapper() {
         log.Fatalf("Unable to retrieve Google Groups: %v", err)
     }
     if len(groupsRes.Groups) == 0 {
-        fmt.Println("No groups found.\n")
+        log.Fatalln("No groups found.")
     } else {
         for _, gr := range groupsRes.Groups {
-            fmt.Printf("GROUP EMAIL: %s\n", gr.Email)
-
+            log.Printf("GROUP EMAIL: %s\n", gr.Email)
+            // Search members within this group
             membersRes, err := googleService.Members.List(gr.Email).MaxResults(10).Do()
             if err != nil {
                 log.Fatalf("Unable to retrieve members in group: %v", err)
             }
             if len(membersRes.Members) == 0 {
-                fmt.Println("No members found.\n")
+                log.Println("No members found.")
             } else {
-                //fmt.Println("MEMBERS:")
                 for _, m := range membersRes.Members {
-                    //fmt.Printf("%s\n", m.Email)
                     // Start process of assigning the right CF role based on group email address
                     assignRole(gr.Email, m.Email)
                 }
-            }
-        } // End for
+            } // End if (members)
+        } // End for (groups)
     } // End else
 } // End startMapper
 
