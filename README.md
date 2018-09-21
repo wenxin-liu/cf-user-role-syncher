@@ -1,6 +1,14 @@
 # Gmapper
 The aim of Gmapper is to map members (users) of a Google **Group** to its respective **Role** in CloudFoundry. This automates the assignment of Org and Space roles to individual users.
 
+- [Why was Gmapper created?](#why-was-gmapper-created)
+- [How to build?](#how-to-build)
+- [What do you need to feed into Gmapper?](#what-do-you-need-to-feed-into-gmapper)
+- [What does the app really do?](#what-does-the-app-really-do)
+- [How to run locally?](#how-to-run-locally)
+- [Specifics for running in halfpipe](#specifics-for-running-in-halfpipe)
+
+
 ## Why was Gmapper created?
 When single sign on (SSO) is implemented on CloudFoundry (CF), this means there is an authentication provider configured for UAA. Within Springer Nature we decided to use Google as provider using OpenID Connect as the SSO protocol. UAA handles the authentication (who are you?), but it does not handle the authorization (what are you allowed to do?). Every user needs to get an Org and/or Space role assigned within CF before it can do anything. Therefore, Gmapper was created to act as a complementary component to CF SSO in order to automate authorization.
 
