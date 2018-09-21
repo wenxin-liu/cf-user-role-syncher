@@ -121,13 +121,3 @@ func GetTokenFromWeb(config *oauth2.Config, file string) error {
     json.NewEncoder(f).Encode(token)
     return err
 }
-
-
-func contains(arr []string, str string) bool {
-   for _, a := range arr {
-      if a == str {
-         return true
-      }
-   }
-   return false
-}
