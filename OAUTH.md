@@ -39,7 +39,7 @@ cat credentials.json | jq -r .installed.redirect_uris[0]
 
 
 ## Oauth Refresh Token for Google
-In the above [step](#oauth-client-credentials-for-google) getting Client credentials we only registered an app at Google. This does not provide us yet with an Oauth Token to authorize Google API calls. This section explains how to get the necessary Token data for gmapper.
+In the above [step](#oauth-client-credentials-for-google) we only registered an app at Google. This does not provide us yet with an Oauth Token to authorize Google API calls. This section explains how to get the necessary Token data for gmapper.
 
 First make sure the `credentials.json` file from the previous [step](#oauth-client-credentials-for-google) is in the same directory as the `gmapper` binary. Now run the following command:
 ```bash
@@ -47,9 +47,10 @@ gmapper token
 ```
 - This will start the process of obtaining a valid Oauth Token. The gmapper app will ask to open an URL in you browser.
 - Copy the URL and open in a browser. The webpage is from Google asking you to sign in with your Google account. Sign in!
-> Use a (newly created dedicated user) which has admin permissions in your GSuite Directory (group read-only permission is sufficient).
+> Use a newly created dedicated user which is a GSuite admin in your GSuite Directory. Being a GSuite Admin is mandatory. Group read-only permission is sufficient.
 - Google displays a consent screen, asking you to authorize the application to request *group* data on you behalf. Approve this request.
 - After you approved, Google will return a code. Copy and paste the code back on the cli.
+- Hit Enter
 - A file `token.json` should now be created.
 
 If you need to set the environment variables manually for gmapper (e.g. in Vault), these are the things you need:

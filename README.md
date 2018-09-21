@@ -61,9 +61,10 @@ Environment variables overview:
 ## How to run locally?
 There is a *source* file provided in the repository which sets all the required environment variables. This will fetch its values from:
 - Your local cf config file (`~/.cf/config.json`). Make sure you are logged in to CF as Admin.
-- Downloaded Google Client credentials file (`./credentials.json`)
-- Generated Google Oauth Tokens file (`./token.json`)
-First follow [these](OAUTH.md) instructions to get the `credentials.json` and `token.json` files. From within the directory where you saved these two files run:
+- Downloaded Google Client credentials file (`./credentials.json`). Get one [here](OAUTH.md#oauth-client-credentials-for-google).
+- Generated Google Oauth Token file (`./token.json`) Get one [here](OAUTH.md#oauth-refresh-token-for-google). 
+
+From within the directory where you saved these two files run:
 ```bash
 source /path/to/gmapper/repo/set-env-vars
 ```
