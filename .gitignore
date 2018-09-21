@@ -1,3 +1,4 @@
 gmapper/gmapper
 *.json
 *.bak
+gmapper/pipeline.yml
