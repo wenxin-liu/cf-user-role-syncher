@@ -23,16 +23,16 @@ Environment variables overview:
 | CFAPIENDPOINT | https://api.mycfdomain.org |
 | UAAENDPOINT | https://uaa.mycfdomain.org |
 | UAASSOPROVIDER | google | This is how you named the configured OpenID Connect provider in uaa |
-| OAUTHCFREFRESHTOKEN | eyJhbGciOiJSUzI1NiIs | [How to get this?]() |
-| GOOGLECLIENTID | 873e7823-ajhgsy652w.apps.googleusercontent.com | [How to get this?]() |
-| GOOGLECLIENTSECRET | qwhk3f9ewy823fuw | [How to get this?]() |
+| OAUTHCFREFRESHTOKEN | eyJhbGciOiJSUzI1NiIs | [How to get this?](OAUTH.md#oauth-refresh-token-for-cf) |
+| GOOGLECLIENTID | 873e7823-ajhgsy652w.apps.googleusercontent.com | [How to get this?](OAUTH.md#oauth-client-credentials-for-google) |
+| GOOGLECLIENTSECRET | qwhk3f9ewy823fuw | [How to get this?](OAUTH.md#oauth-client-credentials-for-google) |
 | GOOGLEREDIRECTURI | urn:ietf:wg:oauth:2.0:oob | This is the first redirect URI provided by Google when you download your Oauth client ID and Secret from Google |
 | GOOGLEAUTHURI | https://accounts.google.com/o/oauth2/auth | Fixed value. This will only change when Google decides to change its Oauth endpoints. |
 | GOOGLETOKENURI | https://www.googleapis.com/oauth2/v3/token | Fixed value. This will only change when Google decides to change its Oauth endpoints. |
 | GOOGLEOAUTHSCOPE | https://www.googleapis.com/auth/admin.directory.group | Fixed value. This will only change when Google decides to change its Oauth scope names. |
-| GOOGLEACCESSTOKEN | dg26.s2iuwxguiw-wiwcvcxh | [How to get this?]() |
-| GOOGLEREFRESHTOKEN | hwqec/wqdc82dwqu21d12jw-21 | [How to get this?]() |
-| GOOGLETOKENTYPE | Bearer | [How to get this?]() |
+| GOOGLEACCESSTOKEN | dg26.s2iuwxguiw-wiwcvcxh | [How to get this?](OAUTH.md#oauth-refresh-token-for-google) |
+| GOOGLEREFRESHTOKEN | hwqec/wqdc82dwqu21d12jw-21 | [How to get this?](OAUTH.md#oauth-refresh-token-for-google) |
+| GOOGLETOKENTYPE | Bearer | [How to get this?](OAUTH.md#oauth-refresh-token-for-google) |
 
 ## What does the app really do?
 
@@ -42,7 +42,7 @@ There is a *source* file provided in the repository which sets all the required 
 - Your local cf config file (`~/.cf/config.json`). Make sure you are logged in to CF as Admin.
 - Downloaded Google Client credentials file (`./credentials.json`)
 - Generated Google Oauth Tokens file (`./token.json`)
-First follow [these]() instructions to get the `credentials.json` and `token.json` files. From within the directory where you saved these two files run:
+First follow [these](OAUTH.md) instructions to get the `credentials.json` and `token.json` files. From within the directory where you saved these two files run:
 ```bash
 source /path/to/gmapper/repo/set-env-vars
 ```
