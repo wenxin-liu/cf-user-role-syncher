@@ -12,6 +12,8 @@ import (
     "google.golang.org/api/admin/directory/v1"
 )
 
+// Declaration of environment variable key names
+const EnvUaaSsoProvider string = "UAASSOPROVIDER"
 const EnvUaaEndPoint string = "UAAENDPOINT"
 const EnvOauthCfRefreshToken string = "OAUTHCFREFRESHTOKEN"
 const EnvGoogleRedirectUri string = "GOOGLEREDIRECTURI"

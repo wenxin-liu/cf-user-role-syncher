@@ -19,8 +19,6 @@ import (
 
 // Declaration of environment variable key names
 const EnvCfApiEndPoint string = "CFAPIENDPOINT"
-const EnvUaaEndPoint string = "UAAENDPOINT"
-const EnvUaaSsoProvider string = "UAASSOPROVIDER"
 
 type ApiResult struct {
     Resources    []struct {
@@ -155,7 +153,7 @@ func assignRole(groupEmail string, username string) {
     q = url.Values{}
     q.Add("attributes", "id,externalId,userName,active,origin,lastLogonTime")
     q.Add("filter", "userName eq \"" + username + "\"")
-    resp = sendHttpRequest("GET", os.Getenv(EnvUaaEndPoint) + "/Users", &q, "")
+    resp = sendHttpRequest("GET", os.Getenv(token.EnvUaaEndPoint) + "/Users", &q, "")
     var user User
     if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
         log.Println(err)
@@ -252,11 +250,11 @@ func createUser(username string) error {
     "familyName": "` + username + `",
     "givenName": "` + username + `"
   },
-  "origin": "` + os.Getenv(EnvUaaSsoProvider) + `",
+  "origin": "` + os.Getenv(token.EnvUaaSsoProvider) + `",
   "userName": "` + username + `"
 }`
     // Send http request
-    resp := sendHttpRequest("POST", os.Getenv(EnvUaaEndPoint) + "/Users", nil, payload)
+    resp := sendHttpRequest("POST", os.Getenv(token.EnvUaaEndPoint) + "/Users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
         fmt.Println("Successfully created user '" + username + "' in UAA")
