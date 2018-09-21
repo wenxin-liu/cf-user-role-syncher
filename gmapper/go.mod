@@ -1,4 +1,4 @@
-module github.com/SpringerPE/cf-google-sso-authorization-handler/gmapper
+module github.com/SpringerPE/cf-user-role-syncher/gmapper
 
 require (
 	cloud.google.com/go v0.28.0 // indirect

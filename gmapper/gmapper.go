@@ -5,14 +5,15 @@ import (
     "encoding/json"
     "errors"
     "fmt"
-	"github.com/SpringerPE/cf-google-sso-authorization-handler/gmapper/token"
 	"log"
     "net/http"
     "net/url"
     "os"
     "strings"
+    
     "golang.org/x/net/context"
     "google.golang.org/api/admin/directory/v1"
+    "github.com/SpringerPE/cf-user-role-syncher/gmapper/token"
     // "io/ioutil"
     // "strconv"
 )
@@ -47,6 +48,13 @@ type User struct {
 // The GUID should be returned when new user is created in UAA
 type UaaGuid struct {
     ID   string `json:"id"`
+}
+
+type Group struct {
+    Org      string
+    Space    string
+    Role     string
+    CfGuid   string
 }
 
 var cliOptionsMsg = `Possible options:
@@ -89,8 +97,16 @@ func startMapper() {
     if len(groupsRes.Groups) == 0 {
         log.Fatalln("No groups found.")
     } else {
+        // Loop over all found groups
         for _, gr := range groupsRes.Groups {
             log.Printf("GROUP EMAIL: %s\n", gr.Email)
+            // Get group attributes
+            group, err := scrapeGroupAttributes(gr.Email + "__test")
+            if err != nil {
+                log.Println(err)
+                continue // Try next group
+            }
+            fmt.Println("Org: " + group.Org + ", Space: " + group.Space + ", Role:" + group.Role)
             // Search members within this group
             membersRes, err := googleService.Members.List(gr.Email).Do()
             if err != nil {
@@ -107,6 +123,32 @@ func startMapper() {
         } // End for (groups)
     } // End else
 } // End startMapper
+
+
+func scrapeGroupAttributes(email string) (*Group, error) {
+    // Get the part of the group email address before the '@'
+    mailboxName := strings.Split(email, "@")[0]
+    // Split the mailboxName to get org, space and role
+    groupAttr := strings.Split(mailboxName, "__")
+    var org, space, role string
+    // 3 items in group email = Org role
+    // 4 items in group email = Space role
+    if len(groupAttr) == 3 {
+        role  = groupAttr[2]
+    } else if len(groupAttr) == 4 {
+        space = groupAttr[2]
+        role  = groupAttr[3]
+    } else {
+        return nil, errors.New("Not a valid group email format for email: " + email)
+    }
+    org = groupAttr[1]
+    var group = Group{
+        Org: org,
+        Space: space,
+        Role: role,
+    }
+    return &group, nil
+}
 
 
 func assignRole(groupEmail string, username string) {
@@ -126,10 +168,9 @@ func assignRole(groupEmail string, username string) {
         log.Println("Not a valid group email format! Role assignment fails for group: " + groupEmail)
         return
     }
+    org = groupAttr[1]
     // First we need to get the org GUID
     // Set query string parameters to search org
-    org = groupAttr[1]
-    //fmt.Println("ORG = " + org)
     q := url.Values{}
     q.Add("q", "name:" + org)
     q.Add("inline-relations-depth", "1")

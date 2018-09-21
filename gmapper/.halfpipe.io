@@ -1,5 +1,5 @@
 team: engineering-enablement
-pipeline: gsuite-cf-roles-mapper-gmapper
+pipeline: cf-user-role-syncher
 trigger_interval: 0.25h
 repo:
   watched_paths:
@@ -11,17 +11,16 @@ tasks:
   docker:
     image: golang:1.11-stretch
   vars:
-    CFAPIENDPOINT: ((gsuite-cf-roles-mapper.CFAPIENDPOINT))
-    UAAENDPOINT: ((gsuite-cf-roles-mapper.UAAENDPOINT))
-    UAASSOPROVIDER: ((gsuite-cf-roles-mapper.UAASSOPROVIDER))
-    OAUTHCFREFRESHTOKEN: ((gsuite-cf-roles-mapper.OAUTHCFREFRESHTOKEN))
-    GOOGLEREDIRECTURI: ((gsuite-cf-roles-mapper.GOOGLEREDIRECTURI))
-    GOOGLEAUTHURI: ((gsuite-cf-roles-mapper.GOOGLEAUTHURI))
-    GOOGLETOKENURI: ((gsuite-cf-roles-mapper.GOOGLETOKENURI))
-    GOOGLECLIENTID: ((gsuite-cf-roles-mapper.GOOGLECLIENTID))
-    GOOGLECLIENTSECRET: ((gsuite-cf-roles-mapper.GOOGLECLIENTSECRET))
-    GOOGLEOAUTHSCOPE: ((gsuite-cf-roles-mapper.GOOGLEOAUTHSCOPE))
-    GOOGLEACCESSTOKEN: ((gsuite-cf-roles-mapper.GOOGLEACCESSTOKEN))
-    GOOGLEREFRESHTOKEN: ((gsuite-cf-roles-mapper.GOOGLEREFRESHTOKEN))
-    GOOGLETOKENTYPE: ((gsuite-cf-roles-mapper.GOOGLETOKENTYPE))
-
+    CFAPIENDPOINT: ((cf-user-role-syncher.CFAPIENDPOINT))
+    UAAENDPOINT: ((cf-user-role-syncher.UAAENDPOINT))
+    UAASSOPROVIDER: ((cf-user-role-syncher.UAASSOPROVIDER))
+    OAUTHCFREFRESHTOKEN: ((cf-user-role-syncher.OAUTHCFREFRESHTOKEN))
+    GOOGLEREDIRECTURI: ((cf-user-role-syncher.GOOGLEREDIRECTURI))
+    GOOGLEAUTHURI: ((cf-user-role-syncher.GOOGLEAUTHURI))
+    GOOGLETOKENURI: ((cf-user-role-syncher.GOOGLETOKENURI))
+    GOOGLECLIENTID: ((cf-user-role-syncher.GOOGLECLIENTID))
+    GOOGLECLIENTSECRET: ((cf-user-role-syncher.GOOGLECLIENTSECRET))
+    GOOGLEOAUTHSCOPE: ((cf-user-role-syncher.GOOGLEOAUTHSCOPE))
+    GOOGLEACCESSTOKEN: ((cf-user-role-syncher.GOOGLEACCESSTOKEN))
+    GOOGLEREFRESHTOKEN: ((cf-user-role-syncher.GOOGLEREFRESHTOKEN))
+    GOOGLETOKENTYPE: ((cf-user-role-syncher.GOOGLETOKENTYPE))
