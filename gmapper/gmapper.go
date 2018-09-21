@@ -82,7 +82,7 @@ func startMapper() {
         log.Fatalf("Unable to retrieve directory Client: %v", err)
     }
     // Search for all Google Groups matching the search pattern
-    groupsRes, err := googleService.Groups.List().Customer("my_customer").Query("email:snpaas__*").MaxResults(10).Do()
+    groupsRes, err := googleService.Groups.List().Customer("my_customer").Query("email:snpaas__*").Do()
     if err != nil {
         log.Fatalf("Unable to retrieve Google Groups: %v", err)
     }
@@ -92,7 +92,7 @@ func startMapper() {
         for _, gr := range groupsRes.Groups {
             log.Printf("GROUP EMAIL: %s\n", gr.Email)
             // Search members within this group
-            membersRes, err := googleService.Members.List(gr.Email).MaxResults(10).Do()
+            membersRes, err := googleService.Members.List(gr.Email).Do()
             if err != nil {
                 log.Fatalf("Unable to retrieve members in group: %v", err)
             }
