@@ -49,9 +49,9 @@ Environment variables overview:
 - Search in your GSuite directory for groups starting with the defined group name prefix. The prefix is meant to identify the groups that are used for CF authorization. For example, search for all groups starting with *cfrole__*.
 - Iterate over every found group. For every group do:
 - Is it about an org role or a space role? Every Google Group needs to be named according to a fixed naming convention:
-  > *groupprefix__orgname__rolename@yourdomain.com* for org roles.
-  > Possible org role names are: `orgmanager`, `billingmanager`, `auditor`
-  > *groupprefix__orgname__spacename__rolename@yourdomain.com* for space roles.
+  > *groupprefix__orgname__rolename@yourdomain.com* for org roles.  
+  > Possible org role names are: `orgmanager`, `billingmanager`, `auditor`  
+  > *groupprefix__orgname__spacename__rolename@yourdomain.com* for space roles.  
   > Possible space role names are: `spacemanager`, `spacedeveloper`, `spaceauditor`
 - Fetch the members from the group. It will use the email address as username.
 - Even with sso, uaa requires an actual user account to be present. You can configure your uaa sso provider to automatically create the user when signing in for the first time (*addShadowUserOnLogin: true*). We haven't enabled this as this allows any valid Google account to sign in. Therefore, gmapper checks if a group member already exists as user in uaa. If not, the user will be created.
