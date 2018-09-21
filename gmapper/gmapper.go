@@ -101,7 +101,7 @@ func startMapper() {
         for _, gr := range groupsRes.Groups {
             log.Printf("GROUP EMAIL: %s\n", gr.Email)
             // Get group attributes
-            group, err := scrapeGroupAttributes(gr.Email + "__test")
+            group, err := scrapeGroupAttributes(gr.Email)
             if err != nil {
                 log.Println(err)
                 continue // Try next group
