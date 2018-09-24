@@ -50,6 +50,8 @@ type UaaGuid struct {
     ID   string `json:"id"`
 }
 
+// Will hold info for every individual group
+// as every group represent a single combination of Org, Space and Role.
 type Group struct {
     Org         string
     Space       string
@@ -87,35 +89,35 @@ func startMapper() {
     httpClient := oauthConf.Client(context.Background(), oauthTok)
     googleService, err := admin.New(httpClient)
     if err != nil {
-        log.Fatalf("Unable to retrieve directory Client: %v", err)
+        log.Fatalf("Unable to create new Google Service (Google client) instance: %v", err)
     }
     // Search for all Google Groups matching the search pattern
     groupsRes, err := googleService.Groups.List().Customer("my_customer").Query("email:snpaas__*").Do()
     if err != nil {
-        log.Fatalf("Unable to retrieve Google Groups: %v", err)
+        log.Fatalf("Unable to retrieve Google Groups: %v", err)  // Exit program
     }
     if len(groupsRes.Groups) == 0 {
         log.Fatalln("No groups found.")
     } else {
         // Loop over all found groups
         for _, gr := range groupsRes.Groups {
-            log.Printf("GROUP EMAIL: %s\n", gr.Email)
+            log.Printf("GROUP EMAIL: %v\n", gr.Email)
             // Get group attributes
             group, err := scrapeGroupAttributes(gr.Email)
             if err != nil {
-                log.Println(err)
+                log.Printf("Could not scrape group attributes: %v\n", err)
                 continue // Try next group
             }
             // Get Org GUID from CF
             group.CfOrgGuid, err = getOrgGuid(group.Org)
             if err != nil {
-                log.Println(err)
+                log.Printf("Could not get Org GUID: %v\n", err)
                 continue // Try next group
             }
             // Search members within this group
             membersRes, err := googleService.Members.List(gr.Email).Do()
             if err != nil {
-                log.Fatalf("Unable to retrieve members in group: %v", err)
+                log.Fatalf("Unable to retrieve members in group: %v", err) // Exit program
             }
             if len(membersRes.Members) == 0 {
                 log.Println("No members found.")
@@ -124,12 +126,12 @@ func startMapper() {
                 for _, m := range membersRes.Members {
                     // First make sure the username exists on CF/UAA side
                     if err := createShadowUserCF(m.Email); err != nil {
-                        log.Println(err)
+                        log.Printf("Could not create new user in CF/UAA for user '" + m.Email +"': %v\n", err)
                         continue // Try next member
                     }
                     // Start process of assigning the right CF Org/Space role to this member
                     if err := assignRole(group, m.Email); err != nil {
-                        log.Println(err)
+                        log.Printf("Could not assign role for user '" + m.Email + "': %v\n", err)
                         continue // Try next member
                     }
                 } // End for (members)
