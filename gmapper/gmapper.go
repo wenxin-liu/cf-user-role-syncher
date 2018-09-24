@@ -51,10 +51,10 @@ type UaaGuid struct {
 }
 
 type Group struct {
-    Org      string
-    Space    string
-    Role     string
-    CfGuid   string
+    Org         string
+    Space       string
+    Role        string
+    CfOrgGuid   string
 }
 
 var cliOptionsMsg = `Possible options:
@@ -106,7 +106,12 @@ func startMapper() {
                 log.Println(err)
                 continue // Try next group
             }
-            fmt.Println("Org: " + group.Org + ", Space: " + group.Space + ", Role:" + group.Role)
+            // Get Org GUID from CF
+            group.CfOrgGuid, err = getOrgGuid(group.Org)
+            if err != nil {
+                log.Println(err)
+                continue // Try next group
+            }
             // Search members within this group
             membersRes, err := googleService.Members.List(gr.Email).Do()
             if err != nil {
@@ -115,10 +120,19 @@ func startMapper() {
             if len(membersRes.Members) == 0 {
                 log.Println("No members found.")
             } else {
+                // Loop over all found members within this one group
                 for _, m := range membersRes.Members {
-                    // Start process of assigning the right CF role based on group email address
-                    assignRole(gr.Email, m.Email)
-                }
+                    // First make sure the username exists on CF/UAA side
+                    if err := createShadowUserCF(m.Email); err != nil {
+                        log.Println(err)
+                        continue // Try next member
+                    }
+                    // Start process of assigning the right CF Org/Space role to this member
+                    if err := assignRole(group, m.Email); err != nil {
+                        log.Println(err)
+                        continue // Try next member
+                    }
+                } // End for (members)
             } // End if (members)
         } // End for (groups)
     } // End else
@@ -151,25 +165,7 @@ func scrapeGroupAttributes(email string) (*Group, error) {
 }
 
 
-func assignRole(groupEmail string, username string) {
-    // Get the part of the group email address before the '@'
-    mailboxName := strings.Split(groupEmail, "@")[0]
-    // Split the mailboxName to get org, space and role
-    groupAttr := strings.Split(mailboxName, "__")
-    var org, space, role string
-    // 3 items in group email = Org role
-    // 4 items in group email = Space role
-    if len(groupAttr) == 3 {
-        role  = groupAttr[2]
-    } else if len(groupAttr) == 4 {
-        space = groupAttr[2]
-        role  = groupAttr[3]
-    } else {
-        log.Println("Not a valid group email format! Role assignment fails for group: " + groupEmail)
-        return
-    }
-    org = groupAttr[1]
-    // First we need to get the org GUID
+func getOrgGuid(org string) (string, error) {
     // Set query string parameters to search org
     q := url.Values{}
     q.Add("q", "name:" + org)
@@ -183,147 +179,145 @@ func assignRole(groupEmail string, username string) {
     // Create new ApiResult data set and parse json from the response
     var orgs ApiResult
     if err := json.NewDecoder(resp.Body).Decode(&orgs); err != nil {
-        log.Println(err)
+        return "", err
     }
     // Check if there is exactly one org found
-    //fmt.Println("Array length: " + strconv.Itoa(len(orgs.Resources)))
     if len(orgs.Resources) != 1 {
-        fmt.Println("Search for org '" + org + "' did not result in exactly 1 match!")
-        return
+        return "", errors.New("Search for org '" + org + "' did not result in exactly 1 match!")
     }
+    return orgs.Resources[0].Metadata.GUID, nil
+}
+
+
+// Will create a new user in CF/UAA
+// The user gets an 'origin' set to the SSO provider name
+// If the user account already exists, nothing will be done here.
+func createShadowUserCF(username string) error {
     // Search uaa to check if the username exists
     // attributes=id,externalId,userName,active,origin,lastLogonTime
     // filter=userName eq "gerard.laan@springernature.com"
-    q = url.Values{}
+    q := url.Values{}
     q.Add("attributes", "id,externalId,userName,active,origin,lastLogonTime")
     q.Add("filter", "userName eq \"" + username + "\"")
-    resp = sendHttpRequest("GET", os.Getenv(token.EnvUaaEndPoint) + "/Users", &q, "")
+    resp := sendHttpRequest("GET", os.Getenv(token.EnvUaaEndPoint) + "/Users", &q, "")
+    defer resp.Body.Close()
     var user User
     if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-        log.Println(err)
+        return err
     }
     // No user or 1 user is fine. More than 1 user in the search result is not okay!
     if len(user.Resources) > 1 {
-        fmt.Println("Search for user '" + username + "' resulted in more than 1 results!")
-        return
+        return errors.New("Search for user '" + username + "' resulted in more than 1 results!")
     } else if len(user.Resources) == 0 {
-        fmt.Println("User '" + username + "' does not exist. Will now be created.")
-        err := createUser(username)
-        if err != nil {
-            fmt.Println("Could not create user " + username)
-            fmt.Println(err)
-            return
+        // User not found, so this username needs to be created
+        log.Println("User '" + username + "' does not exist. Will now be created.")
+        // Set http PUT payload for sending to uaa
+        var payload string = `{
+            "emails": [
+                {
+                    "primary": true,
+                    "value": "` + username + `"
+                }
+            ],
+            "name": {
+                "familyName": "` + username + `",
+                "givenName": "` + username + `"
+            },
+            "origin": "` + os.Getenv(token.EnvUaaSsoProvider) + `",
+            "userName": "` + username + `"
+        }`
+        // Send http request
+        resp := sendHttpRequest("POST", os.Getenv(token.EnvUaaEndPoint) + "/Users", nil, payload)
+        defer resp.Body.Close()
+        if resp.StatusCode == 201 {
+            log.Println("Successfully created user '" + username + "' in UAA")
+        } else {
+            return errors.New("Failed to created user '" + username + "' in UAA")
+        }
+        // Check if GUID is returned
+        var guid UaaGuid
+        if err := json.NewDecoder(resp.Body).Decode(&guid); err != nil {
+            return err
+        }
+        // When the user was created in UAA above, the API response body should contain GUID for user
+        if guid.ID == "" {
+            return errors.New("GUID was empty in UAA Api call for user " + username)
+        }
+        // Set GUID in CF
+        payload = `{"guid": "` + guid.ID + `"}`
+        resp = sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint) + "/v2/users", nil, payload)
+        defer resp.Body.Close()
+        if resp.StatusCode == 201 {
+            log.Println("Successfully set GUID for '" + username + "' in CF")
+        } else {
+            return errors.New("Failed to set GUID for '" + username + "' in CF")
         }
     }
-    //fmt.Println("GUID = ", orgs.Resources[0].Metadata.GUID)
+    // When user already exists or user was succesfully created, there is no error to return
+    return nil
+}
+
+
+func assignRole(group *Group, username string) error {    
     // Set http PUT payload
     var payload string = `{"username": "` + username + `"}`
     // Make sure the user is associated with the org
-    resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + "/users", nil, payload)
+    resp := sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + group.CfOrgGuid + "/users", nil, payload)
     defer resp.Body.Close()
     if resp.StatusCode == 201 {
-        fmt.Println("Successfully associated user '" + username + "' to org " + org)
+        log.Println("Successfully associated user '" + username + "' to org " + group.Org)
     } else {
-        fmt.Println("Failed to associated user '" + username + "' to org " + org)
+        return errors.New("Failed to associated user '" + username + "' to org " + group.Org)
     }
     // Check if an Org Role or a Space Role needs to be assigned
-    if space != "" {
+    if group.Space != "" {
         // A Space Role needs to be assigned
-        //fmt.Println("Space is: " + space)
         // Get the Space GUID
         q := url.Values{}
-        q.Add("q", "name:" + space)
-        q.Add("q", "organization_guid:" + orgs.Resources[0].Metadata.GUID)
+        q.Add("q", "name:" + group.Space)
+        q.Add("q", "organization_guid:" + group.CfOrgGuid)
         // Send HTTP Request to CF API
         resp = sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces", &q, "")
         defer resp.Body.Close()
         // Create new ApiResult data set and parse json from the response
         var spaces ApiResult
         if err := json.NewDecoder(resp.Body).Decode(&spaces); err != nil {
-            log.Println(err)
+            return err
         }
         if len(spaces.Resources) != 1 {
-            fmt.Println("Search for space '" + space + "' did not result in exactly 1 match!")
-            return
+            return errors.New("Search for space '" + group.Space + "' did not result in exactly 1 match!")
         }
-        //fmt.Println("Space ID: " + spaces.Resources[0].Metadata.GUID)
         // Map for mapping role name to CF API resource path
         roleMap := map[string]string{
             "spacemanager": "/managers",
             "spacedeveloper": "/developers",
             "spaceauditor": "/auditors",
         }
-        resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
+        resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[group.Role], nil, payload)
         defer resp.Body.Close()
         if resp.StatusCode == 201 {
-            fmt.Println("Successfully assigned SpaceRole '" + role + "' to member " + username)
+            log.Println("Successfully assigned SpaceRole '" + group.Role + "' to member " + username)
         } else {
-            fmt.Println("Failed to assign SpaceRole '" + role + "' to member " + username)
+            return errors.New("Failed to assign SpaceRole '" + group.Role + "' to member " + username)
         }
     } else {
-        // A Org Role needs to be assigned
+        // An Org Role needs to be assigned
         // Map for mapping role name to CF API resource path
         roleMap := map[string]string{
             "orgmanager": "/managers",
             "billingmanager": "/billing_managers",
             "auditor": "/auditors",
         }
-        resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + orgs.Resources[0].Metadata.GUID + roleMap[role], nil, payload)
+        resp = sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + group.CfOrgGuid + roleMap[group.Role], nil, payload)
         defer resp.Body.Close()
         if resp.StatusCode == 201 {
-            fmt.Println("Successfully assigned OrgRole '" + role + "' to member " + username)
+            log.Println("Successfully assigned OrgRole '" + group.Role + "' to member " + username)
         } else {
-            fmt.Println("Failed to assign OrgRole '" + role + "' to member " + username)
+            return errors.New("Failed to assign OrgRole '" + group.Role + "' to member " + username)
         }
     }
-}
-
-
-// Create user in uaa and sets user's guid in cf
-func createUser(username string) error {
-    var err error
-    // Set http PUT payload for sending to uaa
-    var payload string = `{
-  "emails": [
-    {
-      "primary": true,
-      "value": "` + username + `"
-    }
-  ],
-  "name": {
-    "familyName": "` + username + `",
-    "givenName": "` + username + `"
-  },
-  "origin": "` + os.Getenv(token.EnvUaaSsoProvider) + `",
-  "userName": "` + username + `"
-}`
-    // Send http request
-    resp := sendHttpRequest("POST", os.Getenv(token.EnvUaaEndPoint) + "/Users", nil, payload)
-    defer resp.Body.Close()
-    if resp.StatusCode == 201 {
-        fmt.Println("Successfully created user '" + username + "' in UAA")
-    } else {
-        return errors.New("Failed to created user '" + username + "' in UAA")
-    }
-    // Check if GUID is returned
-    var guid UaaGuid
-    if err := json.NewDecoder(resp.Body).Decode(&guid); err != nil {
-        return err
-    }
-    // No user or 1 user is fine. More than 1 user in the search result is not okay!
-    if guid.ID == "" {
-        return errors.New("GUID was empty in UAA Api call for user " + username)
-    }
-    // Set GUID in CF
-    payload = `{"guid": "` + guid.ID + `"}`
-    resp = sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint) + "/v2/users", nil, payload)
-    defer resp.Body.Close()
-    if resp.StatusCode == 201 {
-        fmt.Println("Successfully set GUID for '" + username + "' in CF")
-    } else {
-        return errors.New("Failed to set GUID for '" + username + "' in CF")
-    }
-    return err
+    // Role assignment was successful
+    return nil
 }
 
 
