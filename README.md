@@ -18,7 +18,7 @@ In Google groups, for org level roles, group name must follow the format below:
 
   > *groupprefix__CForgname__rolename@yourdomain.com* for org roles.  
   > Possible org role names are: `orgmanager`, `billingmanager`, `auditor`  
-  > e.g. cfroles_engineering-enablement_orgmanager@springernature.com. 
+  > e.g. cfroles__engineering-enablement__orgmanager@springernature.com. 
   
 Then add users who belong to CF org Engineering Enablement with user role orgmanager to this group.
   
@@ -26,7 +26,7 @@ For space level roles, group name must follow the format below:
 
   > *groupprefix__CForgname__spacename__rolename@yourdomain.com* for space roles.  
   > Possible space role names are: `spacemanager`, `spacedeveloper`, `spaceauditor`  
-  > e.g. cfroles_engineering-enablement_live_spacedeveloper@springernature.com
+  > e.g. cfroles__engineering-enablement__live__spacedeveloper@springernature.com
 
 Then add users who belong to CF org Engineering Enablement and space Live with user role spacedeveloper to this group.
 
@@ -36,6 +36,8 @@ Then add users who belong to CF org Engineering Enablement and space Live with u
 - `go build gmapper.go`
 
 > This app is using the module feature from Go 1.11. Therefore, Go 1.11 or up is required to build. If you are building from inside your $GOPATH, please keep [these](https://github.com/golang/go/wiki/Modules#installing-and-activating-module-support) instructions in mind.
+
+This will build the binary (filename: *gmapper*) in the current directory.
 
 #### 3. Configure the environment variables
 CF-user-role-syncher needs a couple of environment variables to be set. In short it needs to know:
@@ -66,7 +68,7 @@ There is a *source* file `set-env-vars` provided in the repository which sets al
 - Downloaded Google Client credentials file (`credentials.json`). Get one [here](OAUTH.md#oauth-client-credentials-for-google).
 - Generated Google Oauth Token file (`token.json`) Get one [here](OAUTH.md#oauth-refresh-token-for-google). 
 
-By default, your CF configuration will be saved in ~/.cf/. Please save `credentials.json` and `token.json` in the same directory as the `set-env-vars` file.
+By default, your CF configuration will be saved in `~/.cf/.` Please save `credentials.json` and `token.json` in the same directory as the `set-env-vars` file.
 
 Then run:
 ```bash
@@ -76,14 +78,14 @@ With the environment variables set you can now run the *cf-user-role-syncher* bi
 
 ## How the app works in detail
 The app performs the steps below:
-- Search in your GSuite directory for groups starting with the defined group name prefix. The prefix is meant to identify the groups that are used for CF authorization. For example, search for all groups starting with *cfrole__*. This allow for more groups to exist in Google Groups, not all used for managing CF authorization.
+- Search in your GSuite Directory for groups starting with the defined group name prefix. The prefix is meant to identify the groups that are used for CF authorization. For example, search for all groups starting with *cfrole__*. This allows for more groups to exist in Google Groups, not all used for managing CF authorization.
 - Iterate over every found group. For every group do:
   - Is it about an org role or a space role? The information is extracted from the structure of the group name, e.g. groupprefix__CForgname__rolename@yourdomain.com or groupprefix__CForgname__spacename__rolename@yourdomain.com
   - Fetch the members from the group. 
   - Even with sso, uaa requires an actual user account to be present. Therefore, cf-user-role-syncher checks if a group member already exists as user in uaa, using the email address as username. If not, the user will be created.
   - The org or space role is assigned to the user.
 
-#### Specifics for running in halfpipe (Springer Nature only)
+## Specifics for running in halfpipe (Springer Nature only)
 Halfpipe is the CI system within Springer Nature. The pipeline definition is configured in `gmapper/.halfpipe.io`. Currently the pipeline is configured to run on a scheduled basis every 15 minutes. This makes sure Google Group members are continuously mapped to their respective roles in CF. However, since the app runs are scheduled, do keep in mind there's a delay for the role mapping between Google and CF of up to 15 minutes.
 
 The needed environment variables are set in Vault. The Vault path is: `springernature/engineering-enablement/cf-user-role-syncher`
