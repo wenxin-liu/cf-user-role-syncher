@@ -136,6 +136,25 @@ func startMapper() {
                     }
                 } // End for (members)
             } // End if (members)
+            // 
+            // Unset the role for users who are not member of the group anymore
+            // Get the role members in CF (so we can compare with the group members)
+            roleMembers, err := getCfRoleMembers(group)
+            if err != nil {
+                log.Fatalf("Could not get list of existing role members from CF: %v\n", err)
+            }
+            // Get a list of usernames which need the role to be unset for 
+            // (essentially the diff between the group members and what is in CF)
+            unauthorizedUsers, err := getRoleMembersDiff()
+            if err != nil {
+                log.Fatalf("Could not generate a diff between group members and role members: %v\n", err)
+            }
+            // Unset the role for every user in the unauthorizedUsers list
+            for _, username := range unauthorizedUsers {
+                if err := unsetRole(username); err != nil {
+                    log.Fatalf("Could not unset role for user '" + username + "': %v\n", err)
+                }
+            }
         } // End for (groups)
     } // End else
 } // End startMapper
@@ -320,6 +339,12 @@ func assignRole(group *Group, username string) error {
     }
     // Role assignment was successful
     return nil
+}
+
+
+func getCfRoleMembers(group *Group) ([]string, error) {
+    var roleMembers []string
+    return roleMembers, nil
 }
 
 
