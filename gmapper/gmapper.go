@@ -30,6 +30,18 @@ type ApiResult struct {
     } `json:"resources"`
 }
 
+// Stucture for getting members of a CF Role
+type RoleMembers struct {
+    Resources    []struct {
+        Metadata struct {
+            GUID      string    `json:"guid"`
+        } `json:"metadata"`
+        Entity struct {
+            Username  string     `json:"username"`
+        } `json:"entity"`
+    } `json:"resources"`
+}
+
 // Structure for user details
 // Used when searching on existence of user in UAA
 type User struct {
@@ -115,15 +127,15 @@ func startMapper() {
                 continue // Try next group
             }
             // Search members within this group
-            membersRes, err := googleService.Members.List(gr.Email).Do()
+            groupMembersRes, err := googleService.Members.List(gr.Email).Do()
             if err != nil {
                 log.Fatalf("Unable to retrieve members in group: %v", err) // Exit program
             }
-            if len(membersRes.Members) == 0 {
+            if len(groupMembersRes.Members) == 0 {
                 log.Println("No members found.")
             } else {
                 // Loop over all found members within this one group
-                for _, m := range membersRes.Members {
+                for _, m := range groupMembersRes.Members {
                     // First make sure the username exists on CF/UAA side
                     if err := createShadowUserCF(m.Email); err != nil {
                         log.Printf("Could not create new user in CF/UAA for user '" + m.Email +"': %v\n", err)
@@ -141,18 +153,17 @@ func startMapper() {
             // Get the role members in CF (so we can compare with the group members)
             roleMembers, err := getCfRoleMembers(group)
             if err != nil {
-                log.Fatalf("Could not get list of existing role members from CF: %v\n", err)
+                log.Printf("Could not get list of existing role members from CF: %v\n", err)
+                continue // Try next group
             }
             // Get a list of usernames which need the role to be unset for 
-            // (essentially the diff between the group members and what is in CF)
-            unauthorizedUsers, err := getRoleMembersDiff(roleMembers, membersRes.Members)
-            if err != nil {
-                log.Fatalf("Could not generate a diff between group members and role members: %v\n", err)
-            }
+            // (essentially the diff between the group members and role members in CF)
+            unauthorizedUsers := getRoleMembersDiff(roleMembers, groupMembersRes.Members)
             // Unset the role for every user in the unauthorizedUsers list
             for _, username := range unauthorizedUsers {
-                if err := unsetRole(username); err != nil {
-                    log.Fatalf("Could not unset role for user '" + username + "': %v\n", err)
+                if err := unsetRole(group, username); err != nil {
+                    log.Printf("Could not unset role for user '" + username + "': %v\n", err)
+                    continue // Try to unset role for next user
                 }
             }
         } // End for (groups)
@@ -344,17 +355,157 @@ func assignRole(group *Group, username string) error {
 
 func getCfRoleMembers(group *Group) ([]string, error) {
     var roleMembers []string
+    var members RoleMembers
+    // Check if an Org Role or a Space Role needs to be unset
+    if group.Space != "" {
+        // A Space Role needs to be unset
+        // Get the Space GUID
+        q := url.Values{}
+        q.Add("q", "name:" + group.Space)
+        q.Add("q", "organization_guid:" + group.CfOrgGuid)
+        // Send HTTP Request to CF API
+        resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces", &q, "")
+        defer resp.Body.Close()
+        // Create new ApiResult data set and parse json from the response
+        var spaces ApiResult
+        if err := json.NewDecoder(resp.Body).Decode(&spaces); err != nil {
+            return roleMembers, err
+        }
+        if len(spaces.Resources) != 1 {
+            return roleMembers, errors.New("Search for space '" + group.Space + "' did not result in exactly 1 match!")
+        }
+        // Map for mapping role name to CF API resource path
+        roleMap := map[string]string{
+            "spacemanager": "/managers",
+            "spacedeveloper": "/developers",
+            "spaceauditor": "/auditors",
+        }
+        resp = sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[group.Role], nil, "")
+        defer resp.Body.Close()
+        if resp.StatusCode != 200 {
+            return roleMembers, errors.New("Failed to get role members from CF.")
+        } else {
+            // Parse json from the response into RoleMembers data structure
+            if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
+                return roleMembers, err
+            }
+        }
+    } else {
+        // An Org Role needs to be unset
+        // Map for mapping role name to CF API resource path
+        roleMap := map[string]string{
+            "orgmanager": "/managers",
+            "billingmanager": "/billing_managers",
+            "auditor": "/auditors",
+        }
+        resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + group.CfOrgGuid + roleMap[group.Role], nil, "")
+        defer resp.Body.Close()
+        if resp.StatusCode != 200 {
+            return roleMembers, errors.New("Failed to get role members from CF.")
+        } else {
+            // Parse json from the response into RoleMembers data structure
+            if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
+                return roleMembers, err
+            }
+        }
+    }
+    // Loop through the API result (available through the RoleMembers data structure)
+    for _, member := range members.Resources {
+        // First check in UAA if the user was created as a SSO user
+        // We only take those 'SSO users' into account
+        resp := sendHttpRequest("GET", os.Getenv(token.EnvUaaEndPoint) + "/Users/" + member.Metadata.GUID , nil, "")
+        defer resp.Body.Close()
+        if resp.StatusCode != 200 {
+            return roleMembers, errors.New("Failed to check UAA for the origin of user '" + member.Entity.Username + "'.")
+        }
+        type UaaUser struct {
+            Origin  string  `json:"origin"`
+        }
+        var uaaUser UaaUser
+        // Parse json from the response into UaaUser data structure
+        if err := json.NewDecoder(resp.Body).Decode(&uaaUser); err != nil {
+            return roleMembers, err
+        }
+        // This is where we match the origin of the user
+        if uaaUser.Origin == os.Getenv(token.EnvUaaSsoProvider) {
+            // Add username to the roleMembers string array
+            roleMembers = append(roleMembers, member.Entity.Username)
+        }
+    } // End for loop (through all role members)
     return roleMembers, nil
 }
 
 
-func getRoleMembersDiff(roleMembers []string, groupMembers ) ([]string, error) {
+func getRoleMembersDiff(roleMembers []string, groupMembers []*admin.Member) []string {
     var unauthorizedUsers []string
-    return unauthorizedUsers, nil
+    // Loop through all roleMembers and check if they are still member of the group
+    for _, roleMember := range roleMembers {
+        // If the roleMember does NOT exist in group, add the user to unauthorizedUsers
+        if !groupContainsMember(roleMember, groupMembers) {
+            unauthorizedUsers = append(unauthorizedUsers, roleMember)
+        }
+    }
+    return unauthorizedUsers
+}
+// Helper function for getRoleMembersDiff
+func groupContainsMember(member string, groupMembers []*admin.Member) bool {
+    for _, groupMember := range groupMembers {
+        if groupMember.Email == member {
+            return true
+        }
+    }
+    return false
 }
 
 
-func unsetRole(username string) error {
+func unsetRole(group *Group, username string) error {
+    // Set http PUT payload
+    var payload string = `{"username": "` + username + `"}`
+    // Check if an Org Role or a Space Role needs to be unset
+    if group.Space != "" {
+        // A Space Role needs to be unset
+        // Get the Space GUID
+        q := url.Values{}
+        q.Add("q", "name:" + group.Space)
+        q.Add("q", "organization_guid:" + group.CfOrgGuid)
+        // Send HTTP Request to CF API
+        resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces", &q, "")
+        defer resp.Body.Close()
+        // Create new ApiResult data set and parse json from the response
+        var spaces ApiResult
+        if err := json.NewDecoder(resp.Body).Decode(&spaces); err != nil {
+            return err
+        }
+        if len(spaces.Resources) != 1 {
+            return errors.New("Search for space '" + group.Space + "' did not result in exactly 1 match!")
+        }
+        // Map for mapping role name to CF API resource path
+        roleMap := map[string]string{
+            "spacemanager": "/managers",
+            "spacedeveloper": "/developers",
+            "spaceauditor": "/auditors",
+        }
+        resp = sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[group.Role] + "/remove", nil, payload)
+        defer resp.Body.Close()
+        if resp.StatusCode != 204 {
+            return errors.New("Failed to unset role '" + group.Role + "' for member " + username)
+        }
+    } else {
+        // An Org Role needs to be unset
+        // Map for mapping role name to CF API resource path
+        roleMap := map[string]string{
+            "orgmanager": "/managers",
+            "billingmanager": "/billing_managers",
+            "auditor": "/auditors",
+        }
+        resp := sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint) + "/v2/organizations/" + group.CfOrgGuid + roleMap[group.Role] + "/remove", nil, payload)
+        defer resp.Body.Close()
+        if resp.StatusCode != 204 {
+            return errors.New("Failed to unset role '" + group.Role + "' for member " + username)
+        }
+    }
+    // Unset role was successful
+    log.Println("Unset role '" + group.Role + "' for user '" + username + "' was successful")
     return nil
 }
 
