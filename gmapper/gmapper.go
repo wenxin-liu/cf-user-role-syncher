@@ -487,7 +487,7 @@ func unsetRole(group *Group, username string) error {
         }
         resp = sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint) + "/v2/spaces/" + spaces.Resources[0].Metadata.GUID + roleMap[group.Role] + "/remove", nil, payload)
         defer resp.Body.Close()
-        if resp.StatusCode != 204 {
+        if resp.StatusCode != 200 {
             return errors.New("Failed to unset role '" + group.Role + "' for member " + username)
         }
     } else {
