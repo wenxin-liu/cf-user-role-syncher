@@ -5,17 +5,17 @@ import (
     "encoding/json"
     "errors"
     "fmt"
-	"log"
+    "io/ioutil"
+    "log"
     "net/http"
     "net/url"
     "os"
+    "strconv"
     "strings"
     
     "golang.org/x/net/context"
     "google.golang.org/api/admin/directory/v1"
     "github.com/SpringerPE/cf-user-role-syncher/gmapper/token"
-    // "io/ioutil"
-    // "strconv"
 )
 
 // Declaration of environment variable key names
@@ -699,10 +699,21 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     if err != nil {
         log.Fatal("Do: ", err)
     }
-    // Use this to debug and see the returned body
-    // bodyBytes, _ := ioutil.ReadAll(resp.Body)
-    // bodyString := string(bodyBytes)
-    // fmt.Println(bodyString)
-    // fmt.Println("Status code: " + strconv.Itoa(resp.StatusCode))
+    // In case the response is not HTTP 2xx (success), we would like to know what 
+    // is in the response body. (Most likely some error which could be helpful)
+    if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+        // Convert response body into a string
+        bodyBytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            log.Println("Not able to output the error for unsuccessful HTTP request (no 2xx code)")
+        } else {
+            bodyString := string(bodyBytes)
+            // Log multi line string
+            log.Println("Error while sending HTTP request:\n" +
+                "HTTP status code: " + strconv.Itoa(resp.StatusCode) + "\n" +
+                "HTTP response body:" + bodyString)
+        }
+    } // End if (when http response is not 2xx)
+    // All done processing the http request. Return the response instance
     return resp
 }
