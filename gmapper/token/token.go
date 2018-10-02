@@ -43,34 +43,32 @@ type TokenResponse struct {
 
 
 // Function for getting a new Oauth Access Token for CF using the Refresh Token
-func GetTokenFromUaa() []byte {
+func GetCfAccessToken() (string, error) {
+    // Set POST formdata paramters
     body := strings.NewReader(`client_id=cf&client_secret=&grant_type=refresh_token&refresh_token=` + os.Getenv(EnvOauthCfRefreshToken))
+    // Form new http request instance
     req, err := http.NewRequest("POST", os.Getenv(EnvUaaEndPoint) + "/oauth/token", body)
     if err != nil {
-        // handle err
+        return "", err
     }
+    // Set http headers
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
     req.Header.Set("Accept", "application/json")
-
+    // Do the actual http request
     resp, err := http.DefaultClient.Do(req)
     if err != nil {
-        // handle err
+        return "", err
     }
+    // Parse the response
     defer resp.Body.Close()
-
-    body1, err := ioutil.ReadAll(resp.Body)
-
-    return body1
-}
-
-
-// Unmarshal the JSON of the CF API response when getting a new Access Token for CF
-func UnmarshalJson(tokenFromUaa []byte) (string) {
+    bodyBytes, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        return "", err
+    }
     var tokenresponse TokenResponse
-    json.Unmarshal(tokenFromUaa, &tokenresponse)
-    a := tokenresponse.AccessToken
-    s := "bearer " + a
-    return s
+    // Parse the raw response body into a TokenResponse data structure
+    json.Unmarshal(bodyBytes, &tokenresponse)
+    return "bearer " + tokenresponse.AccessToken, nil
 }
 
 

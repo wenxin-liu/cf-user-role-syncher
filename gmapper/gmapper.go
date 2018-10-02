@@ -71,6 +71,11 @@ type Group struct {
     CfOrgGuid   string
 }
 
+// This var holds the Oauth Access Token for CF
+// Initializing this with a value similar to 'bearer something' is important
+// This will make CF recognize the Access Token is invalid with the first request to CF
+var cfAccessToken string = "bearer none"
+// This message will show when not providing the right cli options
 var cliOptionsMsg = `Possible options:
 - gmapper token
 
@@ -686,10 +691,10 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     if querystring != nil {
         req.URL.RawQuery = querystring.Encode()
     }
-    //fmt.Println(req.URL.String())
     // Set Headers
-    uaaresponse := token.GetTokenFromUaa()
-    req.Header.Add("Authorization", token.UnmarshalJson(uaaresponse))
+    // uaaresponse := token.GetTokenFromUaa()
+    // req.Header.Add("Authorization", token.UnmarshalJson(uaaresponse))
+    req.Header.Add("Authorization", cfAccessToken)
     if (method == "POST") || (method == "PUT") {
         req.Header.Add("Content-Type", "application/json")
     }
@@ -697,8 +702,38 @@ func sendHttpRequest(method string, url string, querystring *url.Values, payload
     client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
-        log.Fatal("Do: ", err)
+        log.Printf("Error while executing HTTP request: %v\n", err)
     }
+    // The Oauth AccessToken could be expired. If so, we do one try to get a new one and retry the request
+    if resp.StatusCode == 401 {
+        log.Println("Received HTTP 401 response.")
+        type ErrorCode struct {
+            ErrorCode   string `json:"error_code"`
+        }
+        var errorCode ErrorCode
+        // Try to read the CF error_code from the response body
+        if err := json.NewDecoder(resp.Body).Decode(&errorCode); err != nil {
+            log.Printf("Error while reading error_code: %v\n", err)
+        } else {
+            if errorCode.ErrorCode == "CF-InvalidAuthToken" {
+                log.Println("CF OAuth Access Token has expired. Will try to get new Access Token.")
+                // Get new AccessToken
+                cfAccessToken, err = token.GetCfAccessToken()
+                if err != nil {
+                    log.Fatalf("Failed getting a new CF Access Token: %v", err) // Exit app
+                }
+                // Reset the Authorization header
+                req.Header.Set("Authorization", cfAccessToken)
+                // Retry the original request
+                resp, err = client.Do(req)
+                if err != nil {
+                    log.Fatalf("Error while retrying HTTP request with new CF Access Token: %v\n", err) // Exit app
+                } else if resp.StatusCode == 401 {
+                    log.Fatalln("Retrying the original HTTP request with new Access Token still results in HTTP 401.") // Exit app
+                }
+            } // End if (errorCode check)
+        } // End if (Successful response body parsing)
+    } // End if (StatusCode = 401)
     // In case the response is not HTTP 2xx (success), we would like to know what 
     // is in the response body. (Most likely some error which could be helpful)
     if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
