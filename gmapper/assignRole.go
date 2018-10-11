@@ -53,27 +53,24 @@ func assignRole(group *Group, username string) error {
 		} else {
 			return errors.New("Failed to assign SpaceRole '" + group.Role + "' to member " + username)
 		}
-	} else if group.Role == "spacedeveloper" || group.Role == "SpaceDeveloper" {
+	} else if group.Role == "orgmanager" || group.Role == "OrgManager" {
+		//For members of Google Groups named prefix_org_spacerole, assign SpaceDeveloper role for every space in the org
+		//First, sending request to api to list all the spaces in an org
 		resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint)+"/v2/organizations/"+group.CfOrgGuid+
 			"/spaces", nil, "")
 		defer resp.Body.Close()
 
-		var heythere Spaces
-		if err := json.NewDecoder(resp.Body).Decode(&heythere); err != nil {
+		//Then, taking the response and storing only space GUIDs and space names from the org in var AllSpacesFromAnOrg
+		var AllSpacesFromAnOrg Spaces
+		if err := json.NewDecoder(resp.Body).Decode(&AllSpacesFromAnOrg); err != nil {
 			return err
 		}
 
-		for _, r := range heythere.Resources {
-			//fmt.Println(r.Metadata.GUID)
-			//fmt.Println(r.Entity.Name)
-			//roleMap := map[string]string{
-			//	"spacemanager":   "/managers",
-			//	"spacedeveloper": "/developers",
-			//	"spaceauditor":   "/auditors",
-			//}
+		//Lastly, for every space in the org, associate user as SpaceDeveloper using username
+		for _, r := range AllSpacesFromAnOrg.Resources {
 			resp := sendHttpRequest("PUT", os.Getenv(EnvCfApiEndPoint)+"/v2/spaces/"+r.Metadata.GUID+"/developers", nil, payload)
 			defer resp.Body.Close()
-			fmt.Println("Successfully associated " + username + " to space " + r.Entity.Name + " in org " + group.Org + " as SpaceDeveloper!!!")
+			fmt.Println("Successfully associated " + username + " to space " + r.Entity.Name + " in org " + group.Org + " as SpaceDeveloper")
 		}
 
 	} else {
