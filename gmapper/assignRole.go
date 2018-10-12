@@ -53,7 +53,7 @@ func assignRole(group *Group, username string) error {
 		} else {
 			return errors.New("Failed to assign SpaceRole '" + group.Role + "' to member " + username)
 		}
-	} else if group.Role == "orgmanager" || group.Role == "OrgManager" {
+	} else if group.Role == "spacedeveloper" || group.Role == "SpaceDeveloper" {
 		//For members of Google Groups named prefix_org_spacerole, assign SpaceDeveloper role for every space in the org
 		//First, sending request to api to list all the spaces in an org
 		resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint)+"/v2/organizations/"+group.CfOrgGuid+
