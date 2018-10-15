@@ -1,6 +1,5 @@
 team: engineering-enablement
 pipeline: cf-user-role-syncher
-trigger_interval: 0.25h
 repo:
   watched_paths:
   - gmapper
