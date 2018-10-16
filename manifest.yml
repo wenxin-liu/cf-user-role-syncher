@@ -1,0 +1,9 @@
+---
+applications:
+- name: gmapper
+  buildpack: binary_buildpack
+  command: ./gmapper-linux
+  health-check-type: process
+  memory: 50M
+  disk_quota: 50M
+  instances: 1

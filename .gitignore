@@ -2,3 +2,4 @@ gmapper/gmapper
 *.json
 *.bak
 gmapper/pipeline.yml
+cf-user-role-syncher

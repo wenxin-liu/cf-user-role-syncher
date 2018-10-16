@@ -1,7 +1,7 @@
-module github.com/SpringerPE/cf-user-role-syncher/gmapper
+module github.com/SpringerPE/cf-user-role-syncher
 
 require (
-	cloud.google.com/go v0.28.0 // indirect
+	github.com/SpringerPE/cf-user-role-syncher/gmapper v0.0.0-20181015154019-d5618c3d5e95
 	golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	google.golang.org/api v0.0.0-20180916000451-19ff8768a5c0
