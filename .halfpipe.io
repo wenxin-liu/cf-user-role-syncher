@@ -28,4 +28,4 @@ tasks:
   type: deploy-cf
   api: ((cloudfoundry.api-snpaas))
   space: test
-  restore_artifacts: true
+  deploy_artifact: .
