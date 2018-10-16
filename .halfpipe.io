@@ -8,7 +8,12 @@ tasks:
     image: golang:1.11-stretch
   save_artifacts:
     - gmapper-linux
-    - manifest.yml
+
+- name: Deploy to CF
+  type: deploy-cf
+  api: ((cloudfoundry.api-snpaas))
+  space: test
+  deploy_artifact: .
   vars:
     CFAPIENDPOINT: ((cf-user-role-syncher.CFAPIENDPOINT))
     UAAENDPOINT: ((cf-user-role-syncher.UAAENDPOINT))
@@ -23,9 +28,3 @@ tasks:
     GOOGLEACCESSTOKEN: ((cf-user-role-syncher.GOOGLEACCESSTOKEN))
     GOOGLEREFRESHTOKEN: ((cf-user-role-syncher.GOOGLEREFRESHTOKEN))
     GOOGLETOKENTYPE: ((cf-user-role-syncher.GOOGLETOKENTYPE))
-
-- name: Deploy to CF
-  type: deploy-cf
-  api: ((cloudfoundry.api-snpaas))
-  space: test
-  deploy_artifact: .
