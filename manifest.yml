@@ -7,3 +7,4 @@ applications:
   memory: 50M
   disk_quota: 50M
   instances: 1
+  no-route: true
