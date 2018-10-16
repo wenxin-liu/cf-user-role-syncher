@@ -6,5 +6,5 @@ applications:
   health-check-type: process
   memory: 50M
   disk_quota: 50M
-  instances: 1
+  instances: 2
   no-route: true

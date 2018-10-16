@@ -12,7 +12,7 @@ tasks:
 - name: Deploy to CF
   type: deploy-cf
   api: ((cloudfoundry.api-snpaas))
-  space: test
+  space: platform
   deploy_artifact: .
   vars:
     CFAPIENDPOINT: ((cf-user-role-syncher.CFAPIENDPOINT))
