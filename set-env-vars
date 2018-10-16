@@ -1,7 +1,8 @@
 export CFAPIENDPOINT=`cat ~/.cf/config.json | jq -r .Target`
 export UAAENDPOINT=`cat ~/.cf/config.json | jq -r .UaaEndpoint`
 export UAASSOPROVIDER=google
-export OAUTHCFREFRESHTOKEN=`cat ~/.cf/config.json | jq -r .RefreshToken`
+export CFUSERNAME=`cat cfcredentials.json | jq -r .username`
+export CFPASSWORD=`cat cfcredentials.json | jq -r .password`
 export GOOGLEREDIRECTURI=urn:ietf:wg:oauth:2.0:oob
 export GOOGLEAUTHURI=https://accounts.google.com/o/oauth2/auth
 export GOOGLETOKENURI=https://www.googleapis.com/oauth2/v3/token

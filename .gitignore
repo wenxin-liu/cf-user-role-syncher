@@ -5,3 +5,4 @@ gmapper/pipeline.yml
 cf-user-role-syncher
 gmapper-linux
 pipeline.yml
+cfredentials.json
