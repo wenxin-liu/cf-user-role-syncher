@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/SpringerPE/cf-user-role-syncher/gmapper/token"
+	"github.com/SpringerPE/cf-user-role-syncher/token"
 	"golang.org/x/net/context"
 	"google.golang.org/api/admin/directory/v1"
 )

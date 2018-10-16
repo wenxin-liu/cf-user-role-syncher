@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/SpringerPE/cf-user-role-syncher/gmapper/token"
+	"github.com/SpringerPE/cf-user-role-syncher/token"
 )
 
 // Declaration of environment variable key names
@@ -96,4 +96,3 @@ func main() {
 		startMapper()
 	}
 }
-

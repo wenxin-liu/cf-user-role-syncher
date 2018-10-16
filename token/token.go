@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-    "time"
-    "strings"
+	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"

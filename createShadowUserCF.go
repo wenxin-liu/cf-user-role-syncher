@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/SpringerPE/cf-user-role-syncher/gmapper/token"
+	"github.com/SpringerPE/cf-user-role-syncher/token"
 )
 
 // Will create a new user in CF/UAA

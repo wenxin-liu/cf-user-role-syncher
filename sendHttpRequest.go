@@ -10,7 +10,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/SpringerPE/cf-user-role-syncher/gmapper/token"
+	"github.com/SpringerPE/cf-user-role-syncher/token"
 )
 
 func sendHttpRequest(method string, url string, querystring *url.Values, payload string) *http.Response {
