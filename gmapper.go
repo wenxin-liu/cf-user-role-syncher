@@ -38,8 +38,8 @@ type Spaces struct {
 			GUID string `json:"guid"`
 		} `json:"metadata"`
 		Entity struct {
-			Name string `json:"name""`
-		} `json:"entity""`
+			Name string `json:"name"`
+		} `json:"entity"`
 	} `json:"resources"`
 }
 
