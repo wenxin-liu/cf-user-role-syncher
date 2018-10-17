@@ -18,22 +18,29 @@ In Google groups, for org level roles, group name must follow the format below:
 
   > *groupprefix__CForgname__rolename@yourdomain.com* for org roles.  
   > Possible org role names are: `orgmanager`, `billingmanager`, `auditor`  
-  > e.g. cfroles__engineering-enablement__orgmanager@springernature.com. 
-  
+
+e.g. cfroles__engineering-enablement__orgmanager@springernature.com.  
 Then add users who belong to CF org Engineering Enablement with user role orgmanager to this group.
   
 For space level roles, group name must follow the format below: 
 
   > *groupprefix__CForgname__spacename__rolename@yourdomain.com* for space roles.  
   > Possible space role names are: `spacemanager`, `spacedeveloper`, `spaceauditor`  
-  > e.g. cfroles__engineering-enablement__live__spacedeveloper@springernature.com
 
+e.g. cfroles__engineering-enablement__live__spacedeveloper@springernature.com.  
 Then add users who belong to CF org Engineering Enablement and space Live with user role spacedeveloper to this group.
+
+For convenience, and just a common use case, group name can also be in the format below:
+
+  > *groupprefix__CForgname__spacedeveloper@yourdomain.com*
+
+e.g. cfroles__engineering-enablement__spacedeveloper@springernature.com.  
+Then add users who belong to CF org Engineering Enablement and role spacedeveloper, **for every space in the org**, to this group.
 
 #### 2. Build the app
 - Clone the repo
-- `cd cf-user-role-syncher/gmapper`
-- `go build gmapper.go`
+- `cd cf-user-role-syncher`
+- `go build -o gmapper`
 
 > This app is using the module feature from Go 1.11. Therefore, Go 1.11 or up is required to build. If you are building from inside your $GOPATH, please keep [these](https://github.com/golang/go/wiki/Modules#installing-and-activating-module-support) instructions in mind.
 
@@ -42,7 +49,7 @@ This will build the binary (filename: *gmapper*) in the current directory.
 #### 3. Configure the environment variables
 CF-user-role-syncher needs a couple of environment variables to be set. In short it needs to know:
 - The environment (e.g. endpoints from Google and CF)
-- Oauth credentials for both Google and CF
+- Credentials for both Google and CF
 
 Environment variables overview:
 
@@ -51,7 +58,8 @@ Environment variables overview:
 | CFAPIENDPOINT | https://api.mycfdomain.org |
 | UAAENDPOINT | https://uaa.mycfdomain.org |
 | UAASSOPROVIDER | google | This is how you named the configured OpenID Connect provider in uaa |
-| OAUTHCFREFRESHTOKEN | eyJhbGciOiJSUzI1NiIs | [How to get this?](OAUTH.md#oauth-refresh-token-for-cf) |
+| CFUSERNAME | automation.user@mydomain.com | [How to get this?](OAUTH.md#create-credentials-for-cf) |
+| CFPASSWORD | gs62W!sgekjbee&3gshdhd2892SW | [How to get this?](OAUTH.md#create-credentials-for-cf) |
 | GOOGLECLIENTID | 873e7823-ajhgsy652w.apps.googleusercontent.com | [How to get this?](OAUTH.md#oauth-client-credentials-for-google) |
 | GOOGLECLIENTSECRET | qwhk3f9ewy823fuw | [How to get this?](OAUTH.md#oauth-client-credentials-for-google) |
 | GOOGLEREDIRECTURI | urn:ietf:wg:oauth:2.0:oob | This is the first redirect URI provided by Google when you download your Oauth client ID and Secret from Google. Probably a fixed value until Google decides to change this. |
@@ -64,11 +72,12 @@ Environment variables overview:
 
 ## How to run locally?
 There is a *source* file `set-env-vars` provided in the repository which sets all the required environment variables. This will fetch its values from:
-- Your local cf config file (`~/.cf/config.json`). Make sure you are logged in to CF as Admin.
+- Your local cf config file (`~/.cf/config.json`).
+- Self created json file with CF admin credentials (`cfcredentials.json`). Get one [here](OAUTH.md#create-credentials-for-cf).
 - Downloaded Google Client credentials file (`credentials.json`). Get one [here](OAUTH.md#oauth-client-credentials-for-google).
 - Generated Google Oauth Token file (`token.json`) Get one [here](OAUTH.md#oauth-refresh-token-for-google). 
 
-By default, your CF configuration will be saved in `~/.cf/.` Please save `credentials.json` and `token.json` in the same directory as the `set-env-vars` file.
+By default, your CF configuration will be saved in `~/.cf/.` Please save `credentials.json` and `token.json` in the same directory as the `set-env-vars` file. This means in the root of the project.
 
 Then run:
 ```bash
@@ -84,8 +93,9 @@ The app performs the steps below:
   - Fetch the members from the group. 
   - Even with sso, uaa requires an actual user account to be present. Therefore, cf-user-role-syncher checks if a group member already exists as user in uaa, using the email address as username. If not, the user will be created.
   - The org or space role is assigned to the user.
+  - In case of the special group *groupprefix__CForgname__spacedeloper@yourdomain.com* the spacedeveloper role is assigned to the user for every space in the org.
 
 ## Specifics for running in halfpipe (Springer Nature only)
-Halfpipe is the CI system within Springer Nature. The pipeline definition is configured in `gmapper/.halfpipe.io`. Currently the pipeline is configured to run on a scheduled basis every 15 minutes. This makes sure Google Group members are continuously mapped to their respective roles in CF. However, since the app runs are scheduled, do keep in mind there's a delay for the role mapping between Google and CF of up to 15 minutes.
+Halfpipe is the CI system within Springer Nature. The pipeline definition is configured in `.halfpipe.io.yml`. The pipeline is configured to first build the app as a Linux binary. The artifact is saved and then restored in the second pipeline task. The second pipeline task is to deploy the app to Cloudfoundry using the bindary buildpack. *cf-user-role-syncher* is build to run in a continuous loop. This makes sure Google Group members are continuously mapped to their respective roles in CF.
 
 The needed environment variables are set in Vault. The Vault path is: `springernature/engineering-enablement/cf-user-role-syncher`

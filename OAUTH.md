@@ -1,18 +1,32 @@
 # How to get the required Oauth Tokens, Client ID and Secret
 This document provides instructions on how to get all the Oauth related configuration for the Gmapper app to run.
 
-## Oauth Refresh Token for CF
-Gmapper authenticates to the CF api with Oauth. This requires to send along an *Authorization* header with every api call containing a valid Oauth Access Token. An Access Token will expire after a while. Using a Refresh Token an user can obtain a new valid Access Token. Therefore, we actually only care about the Refresh Token.
+## Create credentials for CF
+Gmapper authenticates to the CF api with Oauth. This requires to send along an *Authorization* header with every api call containing a valid Oauth Access Token. An Access Token will expire after a while. The app fetches a new Access Token using a CF username and password. This user does need admin permissions. This is how you create such a user:
 
-We suggest to first create a new CF user account with admin permissions which will be the dedicated user for gmapper to use when talking to the CF api.
-- Login with the CF cli using this new user account
-- Once logged in successfully, the cli stores the oauth details in `~/.cf/config.json`
-
-If you need to set the environment variables manually for gmapper (e.g. in Vault), this is the thing you need:
 ```bash
-# Refresh Token
-cat ~/.cf/config.json | jq -r .RefreshToken
+#First create a user
+cf create-user automation.user@mydomain.com SecretP@assw0rd
+
+# Use the uaa cli to assign admin scopes
+uaac member add cloud_controller.admin automation.user@mydomain.com
+uaac member add uaa.admin automation.user@mydomain.com
+uaac member add scim.read automation.user@mydomain.com
+uaac member add scim.write automation.user@mydomain.com
 ```
+
+Both the username and password need to be set using environment variables for the app to work.
+
+### Using the username/password for running the app locally
+This project contains a simple [script](README.md#how-to-run-locally) to set all the needed environment variables locally. If you like to use this script, please save your CF credentials in a new json file called `cfcredentials.json` in the root of the project.
+
+```json
+{
+ "username": "automation.user@mydomain.com",
+ "password": "SecretP@assw0rd"   
+}
+```
+
 
 ## Oauth Client Credentials for Google
 To be able to call the [Google Directory API](https://developers.google.com/admin-sdk/directory/) for searching Google Groups we need Oauth credentials. In the world of Oauth *gmapper* is the client application which needs to be a *known* app to Google. The way this works in Oauth is by obtaining a Client ID and Secret from Google. Doing this is fairly simple:
