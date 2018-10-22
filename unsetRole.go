@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -40,6 +41,30 @@ func unsetRole(group *Group, username string) error {
 		if resp.StatusCode != 200 {
 			return errors.New("Failed to unset role '" + group.Role + "' for member " + username)
 		}
+	} else if group.Role=="spacedeveloper" || group.Role=="SpaceDeveloper" {
+		//For members of Google Groups named prefix_org_spacerole, assign SpaceDeveloper role for every space in the org
+		//First, sending request to api to list all the spaces in an org
+		resp := sendHttpRequest("GET", os.Getenv(EnvCfApiEndPoint)+"/v2/organizations/"+group.CfOrgGuid+
+			"/spaces", nil, "")
+		defer resp.Body.Close()
+
+		//Then, taking the response and storing only space GUIDs and space names from the org in var AllSpacesFromAnOrg
+		var AllSpacesFromAnOrg Spaces
+		if err := json.NewDecoder(resp.Body).Decode(&AllSpacesFromAnOrg); err != nil {
+			return err
+		}
+
+		//Lastly, for every space in the org, unset user as SpaceDeveloper using username
+		for _, r := range AllSpacesFromAnOrg.Resources {
+			resp := sendHttpRequest("POST", os.Getenv(EnvCfApiEndPoint)+"/v2/spaces/"+r.Metadata.GUID+"/developers/remove", nil, payload)
+			defer resp.Body.Close()
+			fmt.Println("Successfully unset role spacedeveloper " + username + " to space " + r.Entity.Name + " in org " + group.Org)
+
+			if resp.StatusCode != 200 {
+				return errors.New("Failed to unset role spacedeveloper for member " + username + " in space " + r.Entity.Name + " in org " + group.Org)
+			}
+		}
+
 	} else {
 		// An Org Role needs to be unset
 		// Map for mapping role name to CF API resource path
